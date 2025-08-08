@@ -4,163 +4,228 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Chamados</title>
+    <script src="https://kit.fontawesome.com/a2d04cb5f0.js" crossorigin="anonymous"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px);} to { opacity: 1; transform: translateY(0);} }
-    </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100">
 
-<!-- Header -->
-<header class="bg-white shadow p-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold text-blue-600"><i class="fa-solid fa-ticket"></i> Sistema de Chamados</h1>
-    <div class="flex gap-3">
-        <button id="notificationBtn" class="relative p-2 rounded-full bg-blue-50 hover:bg-blue-100 transition">
-            <i class="fa-solid fa-bell text-blue-600"></i>
-        </button>
-        <button id="openCreateModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            <i class="fa-solid fa-plus"></i> Novo Chamado
-        </button>
-    </div>
-</header>
-
-<div class="flex">
     <!-- Sidebar -->
-    <aside class="w-60 bg-white shadow-md p-4 space-y-2">
-        <button class="w-full text-left px-3 py-2 rounded hover:bg-blue-50"><i class="fa-solid fa-list"></i> Todos</button>
-        <button class="w-full text-left px-3 py-2 rounded hover:bg-blue-50"><i class="fa-solid fa-circle text-gray-500"></i> Abertos</button>
-        <button class="w-full text-left px-3 py-2 rounded hover:bg-blue-50"><i class="fa-solid fa-spinner text-yellow-500"></i> Em andamento</button>
-        <button class="w-full text-left px-3 py-2 rounded hover:bg-blue-50"><i class="fa-solid fa-check text-green-500"></i> Resolvidos</button>
-    </aside>
+    <div class="flex">
+        <aside class="w-64 bg-gray-900 text-white h-screen p-4">
+            <h1 class="text-xl font-bold mb-4">Chamados</h1>
+            <nav class="space-y-2">
+                <button class="sidebar-filter w-full text-left px-3 py-2 rounded hover:bg-gray-800" data-filter="all">
+                    <i class="fas fa-list"></i> Todos
+                </button>
+                <button class="sidebar-filter w-full text-left px-3 py-2 rounded hover:bg-gray-800" data-filter="open">
+                    <i class="fas fa-folder-open"></i> Abertos
+                </button>
+                <button class="sidebar-filter w-full text-left px-3 py-2 rounded hover:bg-gray-800" data-filter="in-progress">
+                    <i class="fas fa-tasks"></i> Em andamento
+                </button>
+                <button class="sidebar-filter w-full text-left px-3 py-2 rounded hover:bg-gray-800" data-filter="resolved">
+                    <i class="fas fa-check-circle"></i> Resolvidos
+                </button>
+                <hr class="my-2 border-gray-700">
+                <button id="relatoriosBtn" class="w-full text-left px-3 py-2 rounded hover:bg-gray-800">
+                    <i class="fas fa-chart-bar"></i> Relatórios
+                </button>
+            </nav>
+        </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 p-6">
-        <table class="min-w-full bg-white shadow rounded-lg overflow-hidden">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">ID</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Assunto</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Cliente</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Prioridade</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Criado em</th>
-                    <th class="px-6 py-3"></th>
-                </tr>
-            </thead>
-            <tbody id="ticketsList" class="divide-y divide-gray-200"></tbody>
-        </table>
+        <!-- Conteúdo -->
+        <main class="flex-1 p-6">
+            <h2 class="text-2xl font-bold mb-4">Lista de Chamados</h2>
+            <table class="min-w-full bg-white rounded shadow overflow-hidden">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Título</th>
+                        <th class="px-6 py-3 text-left">Status</th>
+                        <th class="px-6 py-3 text-left">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketsList"></tbody>
+            </table>
+        </main>
+    </div>
 
-        <!-- Pagination -->
-        <nav class="mt-4 flex justify-center space-x-2" aria-label="Pagination">
-            <a href="#" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Anterior</a>
-            <a href="#" class="px-3 py-1 bg-blue-500 text-white rounded">1</a>
-            <a href="#" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Próximo</a>
-        </nav>
-    </main>
-</div>
+    <!-- Modal de visualização -->
+    <div id="viewTicketModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-1/2 p-6 relative">
+            <button onclick="closeModal('viewTicketModal')" class="absolute top-3 right-3 text-gray-500 hover:text-black">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-2">Chamado <span id="ticketId"></span></h3>
+            <p class="mb-2"><strong>Título:</strong> <span id="ticketTitle"></span></p>
+            <p class="mb-2"><strong>Status:</strong> <span id="ticketStatus"></span></p>
 
-<!-- Modal Criar Chamado -->
-<div id="createTicketModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg p-6 w-full max-w-lg shadow-lg fade-in">
-        <h2 class="text-lg font-bold mb-4">Novo Chamado</h2>
-        <input id="ticketSubject" type="text" placeholder="Assunto" class="w-full mb-3 p-2 border rounded">
-        <input id="ticketClient" type="text" placeholder="Cliente" class="w-full mb-3 p-2 border rounded">
-        <select id="ticketPriority" class="w-full mb-3 p-2 border rounded">
-            <option value="low">Baixa</option>
-            <option value="medium">Média</option>
-            <option value="high">Alta</option>
-        </select>
-        <div class="flex justify-end gap-2">
-            <button id="closeCreateModal" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
-            <button id="saveTicket" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Salvar</button>
+            <div class="mt-4 space-x-2">
+                <button class="status-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded" data-status="open">Abrir</button>
+                <button class="status-btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded" data-status="in-progress">Em andamento</button>
+                <button class="status-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded" data-status="resolved">Resolver</button>
+            </div>
+
+            <h4 class="mt-6 font-bold">Comentários</h4>
+            <div id="ticketHistory" class="space-y-2 my-2 bg-gray-100 p-2 rounded"></div>
+            <textarea id="commentText" class="w-full border rounded p-2 mb-2" placeholder="Digite um comentário"></textarea>
+            <button id="addCommentBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Adicionar Comentário</button>
         </div>
     </div>
-</div>
 
-<!-- Modal Visualizar Chamado -->
-<div id="viewTicketModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg fade-in">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold">Chamado <span id="ticketId"></span></h2>
-            <button id="closeViewModal"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <p><strong>Assunto:</strong> <span id="ticketSubjectView"></span></p>
-        <p><strong>Cliente:</strong> <span id="ticketClientView"></span></p>
-        <p><strong>Status:</strong> <span id="ticketStatus"></span></p>
-        <div class="mt-3 flex gap-2">
-            <button class="px-3 py-1 bg-gray-300 rounded">Aberto</button>
-            <button class="px-3 py-1 bg-yellow-300 rounded">Em andamento</button>
-            <button class="px-3 py-1 bg-green-300 rounded">Resolvido</button>
-        </div>
-        <h3 class="mt-4 font-bold">Histórico</h3>
-        <div class="space-y-3 max-h-40 overflow-y-auto border p-2 rounded"></div>
-        <textarea placeholder="Adicionar comentário" class="w-full p-2 border rounded mt-3"></textarea>
-        <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded">Adicionar Comentário</button>
-    </div>
-</div>
+    <script>
+        const db = {
+            getTickets() {
+                return JSON.parse(localStorage.getItem('tickets') || '[]');
+            },
+            saveTickets(tickets) {
+                localStorage.setItem('tickets', JSON.stringify(tickets));
+            },
+            getTicketById(id) {
+                return this.getTickets().find(t => t.id === id);
+            },
+            updateTicketStatus(id, status) {
+                let tickets = this.getTickets();
+                const ticket = tickets.find(t => t.id === id);
+                if (ticket) {
+                    ticket.status = status;
+                    this.saveTickets(tickets);
+                    return true;
+                }
+                return false;
+            }
+        };
 
-<script>
-/* === Banco de dados (localStorage) === */
-const db = {
-    getTickets: () => JSON.parse(localStorage.getItem('tickets') || '[]'),
-    saveTickets: (tickets) => localStorage.setItem('tickets', JSON.stringify(tickets)),
-    addTicket: (ticket) => { const t = db.getTickets(); t.push(ticket); db.saveTickets(t); },
-    updateTicketStatus: (id, status) => { let t = db.getTickets(); const idx = t.findIndex(c => c.id === id); if (idx !== -1) { t[idx].status = status; db.saveTickets(t); return true; } return false; }
-};
+        const ticketsList = document.getElementById('ticketsList');
 
-/* === Elementos === */
-const ticketsList = document.getElementById('ticketsList');
-let currentPage = 1, perPage = 5;
+        function renderTickets(statusFilter = 'all') {
+            const tickets = db.getTickets().filter(ticket => {
+                if (statusFilter === 'all') return true;
+                if (statusFilter === 'open') return ticket.status === 'open';
+                if (statusFilter === 'in-progress') return ticket.status === 'in-progress';
+                if (statusFilter === 'resolved') return ticket.status === 'resolved';
+            });
 
-/* === Render Tickets === */
-function renderTickets(arr = db.getTickets()) {
-    const start = (currentPage - 1) * perPage;
-    const paginated = arr.slice(start, start + perPage);
-    ticketsList.innerHTML = paginated.length ? paginated.map(t => `
-        <tr class="fade-in">
-            <td class="px-6 py-4">#${t.id}</td>
-            <td class="px-6 py-4"><a href="#" class="view-ticket text-blue-600" data-id="${t.id}">${t.subject}</a></td>
-            <td class="px-6 py-4">${t.client}</td>
-            <td class="px-6 py-4">${t.priority}</td>
-            <td class="px-6 py-4">${t.status}</td>
-            <td class="px-6 py-4">${t.createdAt}</td>
-            <td class="px-6 py-4"><button class="view-ticket text-blue-600" data-id="${t.id}"><i class="fa-solid fa-eye"></i></button></td>
-        </tr>
-    `).join('') : `<tr><td colspan="7" class="text-center p-4">Nenhum chamado encontrado</td></tr>`;
-    document.querySelectorAll('.view-ticket').forEach(b => b.onclick = e => { e.preventDefault(); viewTicket(+b.dataset.id); });
-}
+            ticketsList.innerHTML = '';
+            if (tickets.length === 0) {
+                ticketsList.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Nenhum chamado encontrado.</td></tr>`;
+                return;
+            }
+            tickets.forEach(ticket => {
+                ticketsList.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-3">${ticket.id}</td>
+                        <td class="px-6 py-3">${ticket.title}</td>
+                        <td class="px-6 py-3">${ticket.status}</td>
+                        <td class="px-6 py-3">
+                            <button onclick="viewTicket(${ticket.id})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Ver</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
 
-/* === View Ticket === */
-function viewTicket(id) {
-    const t = db.getTickets().find(c => c.id === id);
-    if (!t) return;
-    document.getElementById('ticketId').textContent = '#' + t.id;
-    document.getElementById('ticketSubjectView').textContent = t.subject;
-    document.getElementById('ticketClientView').textContent = t.client;
-    document.getElementById('ticketStatus').textContent = t.status;
-    document.querySelector('#viewTicketModal .space-y-3').innerHTML = '';
-    document.getElementById('viewTicketModal').classList.remove('hidden');
-}
+        function viewTicket(id) {
+            const ticket = db.getTicketById(id);
+            if (!ticket) return;
+            document.getElementById('ticketId').textContent = `#${ticket.id}`;
+            document.getElementById('ticketTitle').textContent = ticket.title;
+            document.getElementById('ticketStatus').textContent = ticket.status;
+            renderComments(ticket.comments || []);
+            document.getElementById('viewTicketModal').classList.remove('hidden');
+        }
 
-/* === Eventos === */
-document.getElementById('openCreateModal').onclick = () => document.getElementById('createTicketModal').classList.remove('hidden');
-document.getElementById('closeCreateModal').onclick = () => document.getElementById('createTicketModal').classList.add('hidden');
-document.getElementById('closeViewModal').onclick = () => document.getElementById('viewTicketModal').classList.add('hidden');
-document.getElementById('saveTicket').onclick = () => {
-    const subject = document.getElementById('ticketSubject').value;
-    const client = document.getElementById('ticketClient').value;
-    const priority = document.getElementById('ticketPriority').value;
-    if (!subject || !client) return alert('Preencha todos os campos');
-    db.addTicket({ id: Date.now(), subject, client, priority, status: 'open', createdAt: new Date().toLocaleString() });
-    document.getElementById('createTicketModal').classList.add('hidden');
-    renderTickets();
-};
+        function renderComments(comments) {
+            const historyDiv = document.getElementById('ticketHistory');
+            historyDiv.innerHTML = '';
+            comments.forEach(c => {
+                historyDiv.innerHTML += `
+                    <div class="flex">
+                        <div class="flex-shrink-0 mr-3">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 border rounded-lg px-4 py-2 bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <h5 class="font-medium">${c.author}</h5>
+                                <span class="text-sm text-gray-500">${c.date}</span>
+                            </div>
+                            <p class="mt-1">${c.text}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
 
-/* === Inicializa === */
-renderTickets();
-</script>
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
 
+        // Filtros
+        document.querySelectorAll('.sidebar-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.getAttribute('data-filter');
+                renderTickets(filter);
+            });
+        });
+
+        // Alterar status
+        document.querySelectorAll('#viewTicketModal .status-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(document.getElementById('ticketId').textContent.replace('#',''));
+                const newStatus = btn.getAttribute('data-status');
+                if (db.updateTicketStatus(id, newStatus)) {
+                    renderTickets();
+                    viewTicket(id);
+                }
+            });
+        });
+
+        // Adicionar comentário
+        document.getElementById('addCommentBtn').addEventListener('click', () => {
+            const id = parseInt(document.getElementById('ticketId').textContent.replace('#',''));
+            const textarea = document.getElementById('commentText');
+            const comment = textarea.value.trim();
+            if (!comment) return;
+            const ticket = db.getTicketById(id);
+            if (!ticket.comments) ticket.comments = [];
+            ticket.comments.push({
+                author: 'Admin',
+                date: new Date().toLocaleString('pt-BR'),
+                text: comment
+            });
+            db.saveTickets(db.getTickets());
+            textarea.value = '';
+            renderComments(ticket.comments);
+        });
+
+        // Relatórios
+        document.getElementById('relatoriosBtn').addEventListener('click', () => {
+            const tickets = db.getTickets();
+            const total = tickets.length;
+            const abertos = tickets.filter(t => t.status === 'open').length;
+            const andamento = tickets.filter(t => t.status === 'in-progress').length;
+            const resolvidos = tickets.filter(t => t.status === 'resolved').length;
+            alert(`
+Relatório:
+Total: ${total}
+Abertos: ${abertos}
+Em andamento: ${andamento}
+Resolvidos: ${resolvidos}
+            `);
+        });
+
+        // Dados iniciais para teste
+        if (db.getTickets().length === 0) {
+            db.saveTickets([
+                { id: 1, title: "Erro no login", status: "open", comments: [] },
+                { id: 2, title: "Sistema lento", status: "in-progress", comments: [] },
+                { id: 3, title: "Atualização concluída", status: "resolved", comments: [] }
+            ]);
+        }
+
+        renderTickets();
+    </script>
 </body>
 </html>
