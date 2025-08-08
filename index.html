@@ -712,5 +712,26 @@
             </div>
         </div>
     </div>
+<!-- Biblioteca EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+    // Inicializar EmailJS com seu Public Key (User ID)
+    emailjs.init("18iTbdZgOnhZNikPs"); // ex: "Qx12A-BCdE3FGHi"
+
+    function sendEmailNotification(to, subject, body) {
+        emailjs.send("service_gbo9njd", "template_fptlzup", {
+            to_email: to,
+            subject: subject,
+            message: body
+        })
+        .then(function(response) {
+            console.log("✅ Email enviado!", response.status, response.text);
+            alert(`Notificação enviada para: ${to}`);
+        }, function(error) {
+            console.error("❌ Erro ao enviar", error);
+            alert("Erro ao enviar o email. Verifique o console.");
+        });
+    }
+</script>
 </body>
 </html>
