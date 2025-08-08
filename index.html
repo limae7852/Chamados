@@ -93,7 +93,6 @@
                                     <option value="Baixa">Baixa</option>
                                     <option value="Média">Média</option>
                                     <option value="Alta">Alta</option>
-                                    <option value="Urgente">Urgente</option>
                                 </select>
                             </div>
                         </div>
@@ -183,7 +182,7 @@
                     <div class="space-y-2 text-sm text-gray-600">
                         <p><i class="fas fa-info-circle mr-2 text-gray-500"></i> Chamados são atendidos em até 48h</p>
                         <p><i class="fas fa-clock mr-2 text-gray-500"></i> Prioridade alta tem resposta em até 4h</p>
-                        <p><i class="fas fa-envelope mr-2 text-gray-500"></i> Você receberá atualizações por e-mail</p>
+                        <p><i class="fas fa-envelope mr-2 text-gray-500"></i> Você receberá atualizações por e-mail</p>                    
                     </div>
                 </div>
             </div>
@@ -501,12 +500,10 @@
                 if (priority === 'Baixa') return 'bg-green-100 text-green-800';
                 if (priority === 'Média') return 'bg-yellow-100 text-yellow-800';
                 if (priority === 'Alta') return 'bg-red-100 text-red-800';
-                if (priority === 'Urgente') return 'bg-blue-100 text-blue-800';
             } else {
                 if (priority === 'Baixa') return 'priority-low';
                 if (priority === 'Média') return 'priority-medium';
                 if (priority === 'Alta') return 'priority-high';
-                if (priority === 'Urgente') return 'priority-urgent';
             }
             return '';
         }
@@ -689,7 +686,6 @@
                                 <option value="Baixa">Baixa</option>
                                 <option value="Média">Média</option>
                                 <option value="Alta">Alta</option>
-                                <option value="Urgente">Urgente</option>
                             </select>
                         </div>
                     </div>
