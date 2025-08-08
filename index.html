@@ -93,6 +93,7 @@
                                     <option value="Baixa">Baixa</option>
                                     <option value="Média">Média</option>
                                     <option value="Alta">Alta</option>
+                                    <option value="Urgente">Urgente</option>
                                 </select>
                             </div>
                         </div>
@@ -500,10 +501,12 @@
                 if (priority === 'Baixa') return 'bg-green-100 text-green-800';
                 if (priority === 'Média') return 'bg-yellow-100 text-yellow-800';
                 if (priority === 'Alta') return 'bg-red-100 text-red-800';
+                if (priority === 'Urgente') return 'bg-blue-100 text-blue-800';
             } else {
                 if (priority === 'Baixa') return 'priority-low';
                 if (priority === 'Média') return 'priority-medium';
                 if (priority === 'Alta') return 'priority-high';
+                if (priority === 'Urgente') return 'priority-urgent';
             }
             return '';
         }
@@ -686,6 +689,7 @@
                                 <option value="Baixa">Baixa</option>
                                 <option value="Média">Média</option>
                                 <option value="Alta">Alta</option>
+                                <option value="Urgente">Urgente</option>
                             </select>
                         </div>
                     </div>
