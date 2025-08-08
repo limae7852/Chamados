@@ -255,9 +255,82 @@
     </div>
 
     <script>
-        // Sample data - in a real app, this would come from a database
-        let tickets = [];
-        const SUPPORT_EMAIL = 'suporte@empresa.com'; // Would be configured in a real app
+        // Database setup
+        const DB_NAME = 'ticketsDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'tickets';
+        let db;
+        const SUPPORT_EMAIL = 'suporte@empresa.com';
+        
+        // Initialize database
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    console.error('Database error:', event.target.error);
+                    reject(event.target.error);
+                };
+                
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        store.createIndex('status', 'status', { unique: false });
+                    }
+                };
+            });
+        }
+        
+        // Database operations
+        function getAllTickets() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+        
+        function addTicket(ticket) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.add(ticket);
+                
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+        
+        function updateTicket(ticket) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(ticket);
+                
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+        
+        function deleteTicket(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+                
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
         
         // DOM Elements
         const ticketFormContainer = document.getElementById('ticketFormContainer');
@@ -279,13 +352,16 @@
         
         // Initialize the app
         document.addEventListener('DOMContentLoaded', () => {
-            // Load any saved tickets from localStorage
-            const savedTickets = localStorage.getItem('tickets');
-            if (savedTickets) {
-                tickets = JSON.parse(savedTickets);
+            // Initialize database and load tickets
+            initDB().then(() => {
+                return getAllTickets();
+            }).then(loadedTickets => {
+                tickets = loadedTickets || [];
                 updateTicketList();
                 updateStats();
-            }
+            }).catch(error => {
+                console.error('Error loading tickets:', error);
+            });
             
             // Event listeners
             newTicketBtn.addEventListener('click', showTicketForm);
@@ -336,8 +412,14 @@
                 comments: []
             };
             
-            tickets.unshift(newTicket);
-            saveTickets();
+            try {
+                await addTicket(newTicket);
+                tickets.unshift(newTicket);
+            } catch (error) {
+                console.error('Error adding ticket:', error);
+                alert('Erro ao salvar o chamado. Tente novamente.');
+                return;
+            }
             updateTicketList();
             updateStats();
             hideTicketForm();
@@ -490,8 +572,13 @@
             closedCountEl.textContent = closedCount;
         }
         
-        function saveTickets() {
-            localStorage.setItem('tickets', JSON.stringify(tickets));
+        async function saveTickets() {
+            try {
+                // For batch operations, we would need to implement them
+                // For now, we'll just update each ticket as needed
+            } catch (error) {
+                console.error('Error saving tickets:', error);
+            }
         }
         
         // Helper functions
@@ -588,8 +675,14 @@
             const ticketIndex = tickets.findIndex(t => t.title === modalTitle);
             
             if (ticketIndex !== -1 && confirm('Deseja realmente excluir este chamado? Esta ação não pode ser desfeita.')) {
-                tickets.splice(ticketIndex, 1);
-                saveTickets();
+                try {
+                    await deleteTicket(ticket.id);
+                    tickets.splice(ticketIndex, 1);
+                } catch (error) {
+                    console.error('Error deleting ticket:', error);
+                    alert('Erro ao excluir o chamado. Tente novamente.');
+                    return;
+                }
                 updateTicketList();
                 updateStats();
                 ticketModal.classList.add('hidden');
@@ -604,7 +697,7 @@
             const ticketIndex = tickets.findIndex(t => t.id === ticketId);
             
             if (ticketIndex !== -1) {
-                tickets[ticketIndex] = {
+                const updatedTicket = {
                     ...tickets[ticketIndex],
                     title: document.getElementById('editTitle').value,
                     description: document.getElementById('editDescription').value,
@@ -613,7 +706,14 @@
                     status: document.getElementById('editStatus').value
                 };
                 
-                saveTickets();
+                try {
+                    await updateTicket(updatedTicket);
+                    tickets[ticketIndex] = updatedTicket;
+                } catch (error) {
+                    console.error('Error updating ticket:', error);
+                    alert('Erro ao atualizar o chamado. Tente novamente.');
+                    return;
+                }
                 updateTicketList();
                 updateStats();
                 editTicketModal.classList.add('hidden');
