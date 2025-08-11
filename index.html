@@ -678,12 +678,18 @@
 
                 // Evento botão editar
                 tr.querySelector(".editBtn").addEventListener("click", () => {
-                // Abre uma tela de edição com os dados do chamado
-                // Por exemplo, você pode exibir um modal de edição preenchido com os dados do chamado
-                // Aqui você pode adicionar o código para abrir a tela de edição e preencher com os dados do chamado
-                  console.log(`Abrir tela de edição para o chamado ID ${ticket.id}`);
-                });
+                  // Obter o chamado correspondente aos dados da linha clicada
+                  const selectedTicket = tickets.find((t) => t.id === ticket.id);
 
+                // Preencher o formulário de edição com os dados do chamado selecionado
+                  document.getElementById("subject").value = selectedTicket.subject;
+                  document.getElementById("client").value = selectedTicket.client;
+                  document.getElementById("priority").value = selectedTicket.priority;
+                  document.getElementById("description").value = selectedTicket.description;
+
+                // Abrir o modal de edição
+                  ticketModal.classList.remove("hidden");
+                });
                 // Evento botão excluir
                   tr.querySelector(".deleteBtn").addEventListener("click", () => {
                   if (confirm(`Deseja realmente excluir o chamado ID ${ticket.id}?`)) {
