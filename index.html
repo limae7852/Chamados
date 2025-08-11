@@ -677,21 +677,21 @@
                 });
 
                 // Evento botão editar (exemplo simples: só alert)
-                tr.querySelector(".editBtn").addEventListener("click", () => {
-                    alert(`Editar chamado ID ${ticket.id} - Implementação futura`);
+                  tr.querySelector(".editBtn").addEventListener("click", () => {
+                  alert(`Editar chamado ID ${ticket.id} - Implementação futura`);
                 });
 
                 // Evento botão excluir
-                tr.querySelector(".deleteBtn").addEventListener("click", () => {
-                    if (confirm(`Deseja realmente excluir o chamado ID ${ticket.id}?`)) {
-                        const index = tickets.findIndex((t) => t.id === ticket.id);
-                        if (index !== -1) {
-                            tickets.splice(index, 1);
-                            displayTickets();
-                            alert("Chamado excluído com sucesso.");
-                        }
-                    }
-                });
+                  tr.querySelector(".deleteBtn").addEventListener("click", () => {
+                  if (confirm(`Deseja realmente excluir o chamado ID ${ticket.id}?`)) {
+                  const index = tickets.findIndex((t) => t.id === ticket.id);
+                  if (index !== -1) {
+                  tickets.splice(index, 1);
+                  displayTickets();
+                   alert("Chamado excluído com sucesso.");
+                       }
+                      }
+                  });
 
                 ticketsList.appendChild(tr);
             });
