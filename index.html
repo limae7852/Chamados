@@ -676,9 +676,12 @@
                     viewTicketModal.classList.remove("hidden");
                 });
 
-                // Evento botão editar (exemplo simples: só alert)
-                  tr.querySelector(".editBtn").addEventListener("click", () => {
-                  alert(`Editar chamado ID ${ticket.id} - Implementação futura`);
+                // Evento botão editar
+                tr.querySelector(".editBtn").addEventListener("click", () => {
+                // Abre uma tela de edição com os dados do chamado
+                // Por exemplo, você pode exibir um modal de edição preenchido com os dados do chamado
+                // Aqui você pode adicionar o código para abrir a tela de edição e preencher com os dados do chamado
+                  console.log(`Abrir tela de edição para o chamado ID ${ticket.id}`);
                 });
 
                 // Evento botão excluir
