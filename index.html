@@ -678,18 +678,34 @@
 
                 // Evento botão editar
                 tr.querySelector(".editBtn").addEventListener("click", () => {
-                  // Obter o chamado correspondente aos dados da linha clicada
-                  const selectedTicket = tickets.find((t) => t.id === ticket.id);
+                // Obter o chamado correspondente aos dados da linha clicada
+                const selectedTicket = tickets.find((t) => t.id === ticket.id);
 
                 // Preencher o formulário de edição com os dados do chamado selecionado
-                  document.getElementById("subject").value = selectedTicket.subject;
-                  document.getElementById("client").value = selectedTicket.client;
-                  document.getElementById("priority").value = selectedTicket.priority;
-                  document.getElementById("description").value = selectedTicket.description;
+                document.getElementById("subject").value = selectedTicket.subject;
+                document.getElementById("client").value = selectedTicket.client;
+                document.getElementById("priority").value = selectedTicket.priority;
+                document.getElementById("description").value = selectedTicket.description;
 
-                // Abrir o modal de edição
-                  ticketModal.classList.remove("hidden");
-                });
+               // Abrir o modal de edição
+              ticketModal.classList.remove("hidden");
+
+              // Evento botão salvar no modal de edição
+              document.getElementById("saveBtn").addEventListener("click", () => {
+              // Atualizar os dados do chamado com base nas alterações feitas no formulário
+              selectedTicket.subject = document.getElementById("subject").value;
+              selectedTicket.client = document.getElementById("client").value;
+              selectedTicket.priority = document.getElementById("priority").value;
+              selectedTicket.description = document.getElementById("description").value;
+
+              // Fechar o modal de edição
+              ticketModal.classList.add("hidden");
+
+              // Atualizar a exibição dos chamados na tabela
+              displayTickets();
+              });
+            });
+
                 // Evento botão excluir
                   tr.querySelector(".deleteBtn").addEventListener("click", () => {
                   if (confirm(`Deseja realmente excluir o chamado ID ${ticket.id}?`)) {
