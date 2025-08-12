@@ -530,7 +530,6 @@ function displayTickets() {
         ${ticket.status !== "resolved" ? `<button class="closeBtn bg-green-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-check mr-1"></i>Encerrar</button>` : ""}
         <button class="viewBtn bg-blue-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-eye mr-1"></i>Ver</button>
         <button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>
-        <button class="deleteBtn bg-red-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-trash mr-1"></i>Excluir</button>
       </td>
     `;
 
@@ -553,13 +552,6 @@ function displayTickets() {
     tr.querySelector(".editBtn").addEventListener("click", () => {
       editingTicketId = ticket.id;
       openModalForTicket(ticket, { viewOnly: false });
-    });
-
-    tr.querySelector(".deleteBtn").addEventListener("click", () => {
-      if (!confirm(`Deseja excluir o chamado ID ${ticket.id}?`)) return;
-      tickets = tickets.filter(t => t.id !== ticket.id);
-      saveTickets(tickets);
-      displayTickets();
     });
 
     ticketsList.appendChild(tr);
