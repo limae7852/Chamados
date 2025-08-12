@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sistema de Chamados - Completo</title>
+  <title>Sistema de Chamados</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <!-- SMTP.js -->
-  <script src="https://smtpjs.com/v3/smtp.js"></script>
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
   <style>
     ::-webkit-scrollbar { width: 8px; }
@@ -44,7 +44,6 @@
   <main class="container mx-auto px-4 py-6">
     <!-- Tickets view -->
     <section id="tabTickets" class="space-y-6">
-
       <!-- Stats -->
       <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
         <div id="cardTotal" class="bg-white p-4 rounded shadow text-center">
@@ -64,22 +63,19 @@
           <div id="statResolved" class="text-2xl font-bold text-blue-600">0</div>
         </div>
       </div>
-
-      <!-- Actions (search, filters, buttons) -->
+      <!-- Actions -->
       <div class="bg-white p-4 rounded shadow flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
           <div class="relative">
-            <input id="searchInput" type="text" placeholder="Buscar assuntos, cliente, técnico..." class="pl-10 pr-3 py-2 border rounded w-72 focus:outline-none" />
+            <input id="searchInput" type="text" placeholder="Buscar..." class="pl-10 pr-3 py-2 border rounded w-72 focus:outline-none" />
             <i class="fas fa-search absolute left-3 top-2 text-gray-400"></i>
           </div>
-
           <select id="statusFilter" class="border rounded px-3 py-2">
             <option value="">Todos os status</option>
             <option value="open">Aberto</option>
             <option value="in-progress">Em andamento</option>
             <option value="resolved">Resolvido</option>
           </select>
-
           <select id="priorityFilter" class="border rounded px-3 py-2">
             <option value="">Todas as prioridades</option>
             <option value="low">Baixa</option>
@@ -88,13 +84,11 @@
             <option value="critical">Crítica</option>
           </select>
         </div>
-
         <div class="flex items-center gap-2">
           <button id="generateReportBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"><i class="fas fa-file-export mr-2"></i>Gerar relatório</button>
           <button id="openTicketModal" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded"><i class="fas fa-plus mr-2"></i>Abrir Chamado</button>
         </div>
       </div>
-
       <!-- tickets table -->
       <div class="bg-white rounded shadow overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -117,127 +111,76 @@
 
     <!-- Config tab -->
     <section id="tabConfig" class="hidden space-y-6">
-
       <div class="bg-white p-4 rounded shadow">
-        <h3 class="text-lg font-semibold mb-2">Configurações de E-mail</h3>
-        <p class="text-sm text-gray-600 mb-4">Preencha os campos para habilitar envio de e-mails (SMTP.js SecureToken).</p>
-
+        <h3 class="text-lg font-semibold mb-2">Configurações de E-mail (EmailJS)</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label class="block">
-            <span class="text-sm text-gray-700">SecureToken (SMTP.js)</span>
-            <input id="cfgToken" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="secure-token-ou-api-key"/>
+            <span class="text-sm text-gray-700">Service ID</span>
+            <input id="cfgServiceId" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="service_xxxxx"/>
           </label>
-
           <label class="block">
-            <span class="text-sm text-gray-700">From (remetente)</span>
-            <input id="cfgFrom" type="email" class="mt-1 block w-full border rounded px-3 py-2" placeholder="seu@empresa.com"/>
+            <span class="text-sm text-gray-700">Template ID</span>
+            <input id="cfgTemplateId" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="template_xxxxx"/>
           </label>
-
+          <label class="block">
+            <span class="text-sm text-gray-700">Public Key</span>
+            <input id="cfgPublicKey" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="xxxx-xxxx"/>
+          </label>
           <label class="block md:col-span-2">
             <span class="text-sm text-gray-700">E-mails internos (separados por vírgula)</span>
             <input id="cfgInternals" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="suporte@empresa.com, gerente@empresa.com"/>
           </label>
-
           <label class="block">
             <span class="text-sm text-gray-700">Assunto padrão - abertura</span>
             <input id="cfgSubjectOpen" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="Novo chamado aberto"/>
           </label>
-
           <label class="block">
             <span class="text-sm text-gray-700">Assunto padrão - encerramento</span>
             <input id="cfgSubjectClose" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="Chamado encerrado"/>
           </label>
         </div>
-
         <div class="mt-4 flex gap-2">
           <button id="saveConfigBtn" class="bg-green-600 text-white px-4 py-2 rounded">Salvar</button>
           <button id="resetConfigBtn" class="bg-gray-300 px-4 py-2 rounded">Restaurar padrões</button>
         </div>
         <p id="configMsg" class="text-sm mt-2 text-green-600 hidden">Configurações salvas.</p>
       </div>
-
       <div class="bg-white p-4 rounded shadow">
         <h3 class="text-lg font-semibold mb-2">Lista de Técnicos</h3>
-        <p class="text-sm text-gray-600 mb-2">Editar lista de técnicos (separados por vírgula). Utilizado no formulário de chamados.</p>
         <textarea id="cfgTechnicians" class="w-full border rounded p-2" rows="2" placeholder="João Silva, Maria Oliveira, Ana Costa"></textarea>
         <div class="mt-2">
           <button id="saveTechBtn" class="bg-green-600 text-white px-4 py-2 rounded">Salvar Técnicos</button>
           <span id="techMsg" class="text-sm text-green-600 ml-3 hidden">Técnicos salvos.</span>
         </div>
       </div>
-
     </section>
   </main>
 </div>
 
-<!-- Modal: create/edit/view -->
-<div id="ticketModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-lg w-full max-w-2xl p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h3 id="modalTitle" class="text-lg font-semibold">Abrir Chamado</h3>
-      <button id="closeTicketModal" class="text-gray-600 hover:text-gray-800"><i class="fas fa-times"></i></button>
+<!-- Modal de abertura de chamado -->
+<div id="ticketModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded shadow-lg w-full max-w-lg p-6">
+    <h2 class="text-xl font-bold mb-4">Abrir Chamado</h2>
+    <div class="space-y-3">
+      <input id="ticketSubject" type="text" placeholder="Assunto" class="w-full border rounded px-3 py-2">
+      <input id="ticketClient" type="text" placeholder="Nome do Cliente" class="w-full border rounded px-3 py-2">
+      <input id="ticketClientEmail" type="email" placeholder="E-mail do Cliente" class="w-full border rounded px-3 py-2">
+      <select id="ticketTech" class="w-full border rounded px-3 py-2"></select>
+      <select id="ticketPriority" class="w-full border rounded px-3 py-2">
+        <option value="low">Baixa</option>
+        <option value="medium">Média</option>
+        <option value="high">Alta</option>
+        <option value="critical">Crítica</option>
+      </select>
     </div>
-
-    <form id="ticketForm" class="space-y-3">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label class="block">
-          <span class="text-sm text-gray-600">Assunto *</span>
-          <input id="subject" required type="text" class="mt-1 block w-full border rounded px-3 py-2" />
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-gray-600">Prioridade *</span>
-          <select id="priority" required class="mt-1 block w-full border rounded px-3 py-2">
-            <option value="">Selecione</option>
-            <option value="low">Baixa</option>
-            <option value="medium">Média</option>
-            <option value="high">Alta</option>
-            <option value="critical">Crítica</option>
-          </select>
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-gray-600">Técnico *</span>
-          <select id="technician" required class="mt-1 block w-full border rounded px-3 py-2"></select>
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-gray-600">Status</span>
-          <select id="status" class="mt-1 block w-full border rounded px-3 py-2">
-            <option value="open">Aberto</option>
-            <option value="in-progress">Em andamento</option>
-            <option value="resolved">Resolvido</option>
-          </select>
-        </label>
-
-        <label class="block md:col-span-2">
-          <span class="text-sm text-gray-600">Nome do Cliente *</span>
-          <input id="clientName" required type="text" class="mt-1 block w-full border rounded px-3 py-2" />
-        </label>
-
-        <label class="block md:col-span-2">
-          <span class="text-sm text-gray-600">E-mail do Cliente *</span>
-          <input id="clientEmail" required type="email" class="mt-1 block w-full border rounded px-3 py-2" />
-        </label>
-      </div>
-
-      <label class="block">
-        <span class="text-sm text-gray-600">Descrição *</span>
-        <textarea id="description" rows="4" required class="mt-1 block w-full border rounded px-3 py-2"></textarea>
-      </label>
-
-      <div class="flex justify-end gap-2">
-        <button type="button" id="cancelTicketBtn" class="bg-gray-300 px-4 py-2 rounded">Cancelar</button>
-        <button type="submit" id="saveTicketBtn" class="bg-orange-600 text-white px-4 py-2 rounded">Salvar</button>
-      </div>
-    </form>
+    <div class="flex justify-end mt-4 gap-2">
+      <button id="cancelTicketBtn" class="bg-gray-300 px-4 py-2 rounded">Cancelar</button>
+      <button id="saveTicketBtn" class="bg-orange-600 text-white px-4 py-2 rounded">Salvar</button>
+    </div>
   </div>
 </div>
 
 <script>
-/* =========================
-   Persistence keys & defaults
-   ========================= */
 const STORAGE_KEY = "tickets_v1";
 const CFG_KEY = "tickets_cfg_v1";
 
@@ -248,472 +191,122 @@ function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
 
 let tickets = loadTickets();
 let cfg = Object.assign({
-  token: "",
-  from: "",
+  serviceId: "",
+  templateId: "",
+  publicKey: "",
   internals: "",
   subjectOpen: "Novo Chamado Aberto",
   subjectClose: "Chamado Encerrado",
   technicians: "João Silva, Maria Oliveira, Carlos Souza"
 }, loadCfg());
 
-let editingTicketId = null;
-let prevStats = { total: -1, open: -1, inProgress: -1, resolved: -1 };
-
-/* DOM refs */
-const tabs = { tickets: document.getElementById("tabTickets"), config: document.getElementById("tabConfig") };
-const btnTabTickets = document.getElementById("tabTicketsBtn");
-const btnTabConfig = document.getElementById("tabConfigBtn");
-
-const ticketsList = document.getElementById("ticketsList");
-const searchInput = document.getElementById("searchInput");
-const statusFilter = document.getElementById("statusFilter");
-const priorityFilter = document.getElementById("priorityFilter");
-
-const statTotal = document.getElementById("statTotal");
-const statOpen = document.getElementById("statOpen");
-const statInProgress = document.getElementById("statInProgress");
-const statResolved = document.getElementById("statResolved");
-const cardTotal = document.getElementById("cardTotal");
-const cardOpen = document.getElementById("cardOpen");
-const cardInProgress = document.getElementById("cardInProgress");
-const cardResolved = document.getElementById("cardResolved");
-
-const openTicketModalBtn = document.getElementById("openTicketModal");
-const ticketModal = document.getElementById("ticketModal");
-const closeTicketModal = document.getElementById("closeTicketModal");
-const ticketForm = document.getElementById("ticketForm");
-const modalTitle = document.getElementById("modalTitle");
-const saveTicketBtn = document.getElementById("saveTicketBtn");
-const cancelTicketBtn = document.getElementById("cancelTicketBtn");
-
-const cfgToken = document.getElementById("cfgToken");
-const cfgFrom = document.getElementById("cfgFrom");
-const cfgInternals = document.getElementById("cfgInternals");
-const cfgSubjectOpen = document.getElementById("cfgSubjectOpen");
-const cfgSubjectClose = document.getElementById("cfgSubjectClose");
-const cfgTechnicians = document.getElementById("cfgTechnicians");
-const saveConfigBtn = document.getElementById("saveConfigBtn");
-const resetConfigBtn = document.getElementById("resetConfigBtn");
-const configMsg = document.getElementById("configMsg");
-const saveTechBtn = document.getElementById("saveTechBtn");
-const techMsg = document.getElementById("techMsg");
-
-/* =========================
-   Email helpers (SMTP.js)
-   ========================= */
 function sendEmailRaw({ to, subject, body }) {
-  if (!cfg.token || !cfg.from) {
-    console.warn("E-mail não enviado: token/from não configurado.");
+  if (!cfg.serviceId || !cfg.templateId || !cfg.publicKey) {
+    console.warn("E-mail não enviado: dados EmailJS não configurados.");
     return Promise.resolve("not-configured");
   }
-  // 'to' can be comma-separated
-  return Email.send({
-    SecureToken: cfg.token,
-    To: to,
-    From: cfg.from,
-    Subject: subject,
-    Body: body
+  emailjs.init(cfg.publicKey);
+  return emailjs.send(cfg.serviceId, cfg.templateId, {
+    to_email: to,
+    subject: subject,
+    message: body
   });
 }
+
 function notifyInternals(subject, body) {
   if (!cfg.internals) return Promise.resolve("no-internals");
   return sendEmailRaw({ to: cfg.internals, subject, body });
 }
+
 function notifyClient(clientEmail, subject, body) {
   if (!clientEmail) return Promise.resolve("no-client");
   return sendEmailRaw({ to: clientEmail, subject, body });
 }
 
-/* =========================
-   Tab navigation
-   ========================= */
-function showTab(name) {
-  if (name === "tickets") { tabs.tickets.classList.remove("hidden"); tabs.config.classList.add("hidden"); }
-  else { tabs.tickets.classList.add("hidden"); tabs.config.classList.remove("hidden"); }
+function updateTable() {
+  const tbody = document.getElementById("ticketsList");
+  tbody.innerHTML = "";
+  tickets.forEach(ticket => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="px-4 py-2">${ticket.id}</td>
+      <td class="px-4 py-2">${ticket.subject}</td>
+      <td class="px-4 py-2">${ticket.client}</td>
+      <td class="px-4 py-2">${ticket.tech}</td>
+      <td class="px-4 py-2">${ticket.priority}</td>
+      <td class="px-4 py-2">${ticket.status}</td>
+      <td class="px-4 py-2">${ticket.date}</td>
+      <td class="px-4 py-2">
+        <button onclick="closeTicket(${ticket.id})" class="bg-green-600 text-white px-2 py-1 rounded">Concluir</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
-btnTabTickets.addEventListener("click", () => showTab("tickets"));
-btnTabConfig.addEventListener("click", () => showTab("config"));
 
-/* =========================
-   Config UI
-   ========================= */
-function loadCfgToUI() {
-  cfgToken.value = cfg.token || "";
-  cfgFrom.value = cfg.from || "";
-  cfgInternals.value = cfg.internals || "";
-  cfgSubjectOpen.value = cfg.subjectOpen || "";
-  cfgSubjectClose.value = cfg.subjectClose || "";
-  cfgTechnicians.value = cfg.technicians || "";
+function openModal() {
+  document.getElementById("ticketModal").classList.remove("hidden");
 }
-loadCfgToUI();
 
-saveConfigBtn.addEventListener("click", () => {
-  cfg.token = cfgToken.value.trim();
-  cfg.from = cfgFrom.value.trim();
-  cfg.internals = cfgInternals.value.trim();
-  cfg.subjectOpen = cfgSubjectOpen.value.trim() || cfg.subjectOpen;
-  cfg.subjectClose = cfgSubjectClose.value.trim() || cfg.subjectClose;
-  cfg.technicians = cfgTechnicians.value.trim();
-  saveCfg(cfg);
-  configMsg.classList.remove("hidden");
-  setTimeout(()=>configMsg.classList.add("hidden"), 2200);
-  populateTechniciansSelect();
-});
-
-resetConfigBtn.addEventListener("click", () => {
-  cfg = {
-    token: "",
-    from: "",
-    internals: "",
-    subjectOpen: "Novo Chamado Aberto",
-    subjectClose: "Chamado Encerrado",
-    technicians: "João Silva, Maria Oliveira, Carlos Souza"
-  };
-  saveCfg(cfg);
-  loadCfgToUI();
-  populateTechniciansSelect();
-  configMsg.classList.remove("hidden");
-  setTimeout(()=>configMsg.classList.add("hidden"), 2200);
-});
-
-saveTechBtn.addEventListener("click", () => {
-  cfg.technicians = cfgTechnicians.value.trim();
-  saveCfg(cfg);
-  techMsg.classList.remove("hidden");
-  setTimeout(()=>techMsg.classList.add("hidden"), 2000);
-  populateTechniciansSelect();
-});
-
-/* =========================
-   Technicians select
-   ========================= */
-function getTechnicians() {
-  const raw = cfg.technicians || "";
-  return raw.split(",").map(s => s.trim()).filter(Boolean);
+function closeModal() {
+  document.getElementById("ticketModal").classList.add("hidden");
 }
-function populateTechniciansSelect() {
-  const sel = document.getElementById("technician");
-  sel.innerHTML = "<option value=''>Selecione</option>";
-  getTechnicians().forEach(t => {
+
+document.getElementById("openTicketModal").onclick = () => {
+  const techSelect = document.getElementById("ticketTech");
+  techSelect.innerHTML = "";
+  cfg.technicians.split(",").map(t => t.trim()).forEach(t => {
     const opt = document.createElement("option");
     opt.value = t;
     opt.textContent = t;
-    sel.appendChild(opt);
+    techSelect.appendChild(opt);
   });
-}
-populateTechniciansSelect();
+  openModal();
+};
 
-/* =========================
-   Stats utils
-   ========================= */
-function animateCard(card) {
-  card.classList.remove("highlight");
-  void card.offsetWidth;
-  card.classList.add("highlight");
-}
-function updateStats() {
-  const total = tickets.length;
-  const open = tickets.filter(t => t.status === "open").length;
-  const inProgress = tickets.filter(t => t.status === "in-progress").length;
-  const resolved = tickets.filter(t => t.status === "resolved").length;
+document.getElementById("cancelTicketBtn").onclick = closeModal;
 
-  if (total !== prevStats.total) animateCard(cardTotal);
-  if (open !== prevStats.open) animateCard(cardOpen);
-  if (inProgress !== prevStats.inProgress) animateCard(cardInProgress);
-  if (resolved !== prevStats.resolved) animateCard(cardResolved);
+document.getElementById("saveTicketBtn").onclick = () => {
+  const subject = document.getElementById("ticketSubject").value.trim();
+  const client = document.getElementById("ticketClient").value.trim();
+  const clientEmail = document.getElementById("ticketClientEmail").value.trim();
+  const tech = document.getElementById("ticketTech").value;
+  const priority = document.getElementById("ticketPriority").value;
+  const id = tickets.length ? tickets[tickets.length-1].id + 1 : 1;
+  const date = new Date().toLocaleDateString();
+  const ticket = { id, subject, client, clientEmail, tech, priority, status: "open", date };
+  tickets.push(ticket);
+  saveTickets(tickets);
+  updateTable();
+  closeModal();
+  notifyInternals(cfg.subjectOpen, `Novo chamado: ${subject} para ${client} (${clientEmail})`);
+  notifyClient(clientEmail, cfg.subjectOpen, `Seu chamado foi aberto: ${subject}`);
+};
 
-  statTotal.textContent = total;
-  statOpen.textContent = open;
-  statInProgress.textContent = inProgress;
-  statResolved.textContent = resolved;
-
-  prevStats = { total, open, inProgress, resolved };
-}
-
-/* =========================
-   Render tickets list
-   ========================= */
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'", "&#39;");
+function closeTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  t.status = "resolved";
+  saveTickets(tickets);
+  updateTable();
+  notifyInternals(cfg.subjectClose, `Chamado encerrado: ${t.subject}`);
+  notifyClient(t.clientEmail, cfg.subjectClose, `Seu chamado foi encerrado: ${t.subject}`);
 }
 
-function displayTickets() {
-  const searchTerm = (searchInput.value || "").toLowerCase();
-  const statusTerm = statusFilter.value;
-  const priorityTerm = priorityFilter.value;
+document.getElementById("saveConfigBtn").onclick = () => {
+  cfg.serviceId = document.getElementById("cfgServiceId").value.trim();
+  cfg.templateId = document.getElementById("cfgTemplateId").value.trim();
+  cfg.publicKey = document.getElementById("cfgPublicKey").value.trim();
+  cfg.internals = document.getElementById("cfgInternals").value.trim();
+  cfg.subjectOpen = document.getElementById("cfgSubjectOpen").value.trim();
+  cfg.subjectClose = document.getElementById("cfgSubjectClose").value.trim();
+  cfg.technicians = document.getElementById("cfgTechnicians").value.trim();
+  saveCfg(cfg);
+  document.getElementById("configMsg").classList.remove("hidden");
+  setTimeout(() => document.getElementById("configMsg").classList.add("hidden"), 2000);
+};
 
-  ticketsList.innerHTML = "";
-
-  const filtered = tickets.filter(ticket => {
-    const matchSearch =
-      ticket.subject.toLowerCase().includes(searchTerm) ||
-      ticket.clientName.toLowerCase().includes(searchTerm) ||
-      ticket.clientEmail.toLowerCase().includes(searchTerm) ||
-      ticket.technician.toLowerCase().includes(searchTerm) ||
-      ticket.description.toLowerCase().includes(searchTerm);
-    const matchStatus = statusTerm ? ticket.status === statusTerm : true;
-    const matchPriority = priorityTerm ? ticket.priority === priorityTerm : true;
-    return matchSearch && matchStatus && matchPriority;
-  });
-
-  if (!filtered.length) {
-    ticketsList.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Nenhum chamado encontrado.</td></tr>`;
-    updateStats();
-    return;
-  }
-
-  filtered.forEach(ticket => {
-    const tr = document.createElement("tr");
-    tr.className = ticket.priority ? `priority-${ticket.priority}` : "";
-    tr.innerHTML = `
-      <td class="px-4 py-3">${ticket.id}</td>
-      <td class="px-4 py-3 font-medium">${escapeHtml(ticket.subject)}</td>
-      <td class="px-4 py-3">${escapeHtml(ticket.clientName)}<div class="text-xs text-gray-400">${escapeHtml(ticket.clientEmail)}</div></td>
-      <td class="px-4 py-3">${escapeHtml(ticket.technician)}</td>
-      <td class="px-4 py-3 capitalize">${ticket.priority}</td>
-      <td class="px-4 py-3 capitalize">${ticket.status.replace("-", " ")}</td>
-      <td class="px-4 py-3">${ticket.date}</td>
-      <td class="px-4 py-3 space-x-1">
-        ${ticket.status !== "resolved" ? `<button class="closeBtn bg-green-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-check mr-1"></i>Encerrar</button>` : ""}
-        <button class="viewBtn bg-blue-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-eye mr-1"></i>Ver</button>
-        <button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>
-        <button class="deleteBtn bg-red-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-trash mr-1"></i>Excluir</button>
-      </td>
-    `;
-
-    if (ticket.status !== "resolved") {
-      tr.querySelector(".closeBtn").addEventListener("click", async () => {
-        ticket.status = "resolved";
-        saveTickets(tickets);
-        // notify internals and client (best-effort)
-        notifyInternals(cfg.subjectClose, `Chamado ID ${ticket.id} encerrado.\nAssunto: ${ticket.subject}`).catch(()=>{});
-        notifyClient(ticket.clientEmail, cfg.subjectClose, `Olá ${ticket.clientName},\n\nSeu chamado (ID ${ticket.id}) foi encerrado.\nAssunto: ${ticket.subject}\n\nObrigado.`).catch(()=>{});
-        displayTickets();
-        alert(`Chamado ID ${ticket.id} encerrado.`);
-      });
-    }
-
-    tr.querySelector(".viewBtn").addEventListener("click", () => {
-      openModalForTicket(ticket, { viewOnly: true });
-    });
-
-    tr.querySelector(".editBtn").addEventListener("click", () => {
-      editingTicketId = ticket.id;
-      openModalForTicket(ticket, { viewOnly: false });
-    });
-
-    tr.querySelector(".deleteBtn").addEventListener("click", () => {
-      if (!confirm(`Deseja excluir o chamado ID ${ticket.id}?`)) return;
-      tickets = tickets.filter(t => t.id !== ticket.id);
-      saveTickets(tickets);
-      displayTickets();
-    });
-
-    ticketsList.appendChild(tr);
-  });
-
-  updateStats();
-}
-
-/* =========================
-   Modal handling: create/edit/view
-   ========================= */
-function openModalForTicket(ticket = null, { viewOnly = false } = {}) {
-  const subjectEl = document.getElementById("subject");
-  const priorityEl = document.getElementById("priority");
-  const technicianEl = document.getElementById("technician");
-  const statusEl = document.getElementById("status");
-  const clientNameEl = document.getElementById("clientName");
-  const clientEmailEl = document.getElementById("clientEmail");
-  const descriptionEl = document.getElementById("description");
-
-  if (ticket) {
-    modalTitle.textContent = viewOnly ? `Visualizar Chamado #${ticket.id}` : `Editar Chamado #${ticket.id}`;
-    subjectEl.value = ticket.subject;
-    priorityEl.value = ticket.priority;
-    technicianEl.value = ticket.technician;
-    statusEl.value = ticket.status;
-    clientNameEl.value = ticket.clientName;
-    clientEmailEl.value = ticket.clientEmail;
-    descriptionEl.value = ticket.description;
-  } else {
-    modalTitle.textContent = "Abrir Chamado";
-    subjectEl.value = "";
-    priorityEl.value = "";
-    technicianEl.value = "";
-    statusEl.value = "open";
-    clientNameEl.value = "";
-    clientEmailEl.value = "";
-    descriptionEl.value = "";
-  }
-
-  if (viewOnly) {
-    Array.from(ticketForm.elements).forEach(el => el.disabled = true);
-    saveTicketBtn.classList.add("hidden");
-  } else {
-    Array.from(ticketForm.elements).forEach(el => el.disabled = false);
-    saveTicketBtn.classList.remove("hidden");
-  }
-
-  ticketModal.classList.remove("hidden");
-}
-
-openTicketModalBtn.addEventListener("click", () => { editingTicketId = null; openModalForTicket(null, { viewOnly:false }); });
-closeTicketModal.addEventListener("click", () => ticketModal.classList.add("hidden"));
-cancelTicketBtn.addEventListener("click", () => ticketModal.classList.add("hidden"));
-
-/* =========================
-   submit (create / edit) — via JS (continuando)
-   ========================= */
-ticketForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const subject = document.getElementById("subject").value.trim();
-  const priority = document.getElementById("priority").value;
-  const technician = document.getElementById("technician").value;
-  const status = document.getElementById("status").value;
-  const clientName = document.getElementById("clientName").value.trim();
-  const clientEmail = document.getElementById("clientEmail").value.trim();
-  const description = document.getElementById("description").value.trim();
-
-  if (!subject || !clientName || !clientEmail) {
-    alert("Preencha Assunto, Nome e E-mail do cliente.");
-    return;
-  }
-
-  if (editingTicketId) {
-    // edição
-    const t = tickets.find(x => x.id === editingTicketId);
-    if (!t) { alert("Chamado não encontrado."); ticketModal.classList.add("hidden"); return; }
-
-    t.subject = subject;
-    t.priority = priority;
-    t.technician = technician;
-    t.status = status;
-    t.clientName = clientName;
-    t.clientEmail = clientEmail;
-    t.description = description;
-    saveTickets(tickets);
-
-    // notificar internals
-    notifyInternals(`Chamado Editado - ID ${t.id}`, `O chamado ID ${t.id} foi editado.\nAssunto: ${t.subject}\nCliente: ${t.clientName}\nPrioridade: ${t.priority}`)
-      .then(()=>{}).catch(()=>{});
-
-    alert("Chamado atualizado.");
-  } else {
-    // criação
-    const newId = tickets.length ? Math.max(...tickets.map(x => x.id)) + 1 : 1;
-    const newTicket = {
-      id: newId,
-      subject,
-      priority,
-      technician,
-      status,
-      clientName,
-      clientEmail,
-      description,
-      date: new Date().toLocaleDateString()
-    };
-    tickets.push(newTicket);
-    saveTickets(tickets);
-
-    // notificar internals + confirmar para cliente (ambos best-effort)
-    const internalsPromise = notifyInternals(cfg.subjectOpen || "Novo Chamado Aberto", `Novo chamado ID ${newTicket.id}\nAssunto: ${newTicket.subject}\nCliente: ${newTicket.clientName}\nPrioridade: ${newTicket.priority}`);
-    const clientPromise = notifyClient(newTicket.clientEmail, cfg.subjectOpen || "Seu chamado foi recebido", `Olá ${newTicket.clientName},\n\nRecebemos seu chamado (ID ${newTicket.id}).\nAssunto: ${newTicket.subject}\nTécnico: ${newTicket.technician}\n\nResponderemos em breve.`);
-    Promise.allSettled([internalsPromise, clientPromise]).then(()=>{});
-
-    alert("Chamado criado com sucesso.");
-  }
-
-  ticketModal.classList.add("hidden");
-  editingTicketId = null;
-  displayTickets();
-});
-
-/* =========================
-   Filters & search
-   ========================= */
-searchInput.addEventListener("input", displayTickets);
-statusFilter.addEventListener("change", displayTickets);
-priorityFilter.addEventListener("change", displayTickets);
-
-/* =========================
-   Generate report (nova aba, usando tickets visíveis)
-   ========================= */
-document.getElementById("generateReportBtn").addEventListener("click", () => {
-  const rows = Array.from(document.querySelectorAll("#ticketsList tr"));
-  if (rows.length === 0) { alert("Nenhum chamado encontrado para gerar relatório."); return; }
-
-  const ticketsVisiveis = rows.map(row => {
-    const cells = row.querySelectorAll("td");
-    return {
-      id: cells[0].textContent,
-      subject: cells[1].textContent,
-      client: cells[2].textContent,
-      technician: cells[3].textContent,
-      priority: cells[4].textContent,
-      status: cells[5].textContent,
-      date: cells[6].textContent
-    };
-  });
-
-  const reportWindow = window.open("", "_blank");
-  const now = new Date();
-  const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString();
-
-  let reportHTML = `
-    <html><head><title>Relatório de Chamados</title>
-    <style>body{font-family:Arial;padding:20px;}h1{text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}th{background:#f4f4f4;}</style>
-    </head><body>
-    <h1>Relatório de Chamados</h1>
-    <p>Gerado em: ${dateStr}</p>
-    <table><thead><tr>
-    <th>ID</th><th>Assunto</th><th>Cliente</th><th>Técnico</th><th>Prioridade</th><th>Status</th><th>Data</th>
-    </tr></thead><tbody>
-  `;
-
-  ticketsVisiveis.forEach(t => {
-    reportHTML += `<tr>
-      <td>${t.id}</td>
-      <td>${t.subject}</td>
-      <td>${t.client}</td>
-      <td>${t.technician}</td>
-      <td>${t.priority}</td>
-      <td>${t.status}</td>
-      <td>${t.date}</td>
-    </tr>`;
-  });
-
-  const statusCounts = ticketsVisiveis.reduce((acc, t) => { acc[t.status] = (acc[t.status]||0)+1; return acc; }, {});
-  const priorityCounts = ticketsVisiveis.reduce((acc, t) => { acc[t.priority] = (acc[t.priority]||0)+1; return acc; }, {});
-
-  reportHTML += `</tbody></table>
-    <div style="margin-top:20px"><h3>Resumo por Status</h3><ul>`;
-  Object.entries(statusCounts).forEach(([k,v]) => reportHTML += `<li>${k}: ${v}</li>`);
-  reportHTML += `</ul><h3>Resumo por Prioridade</h3><ul>`;
-  Object.entries(priorityCounts).forEach(([k,v]) => reportHTML += `<li>${k}: ${v}</li>`);
-  reportHTML += `</ul></div></body></html>`;
-
-  reportWindow.document.write(reportHTML);
-  reportWindow.document.close();
-});
-
-/* =========================
-   Bootstrap: display, load cfg into UI
-   ========================= */
-function init() {
-  loadCfgToUI();
-  populateTechniciansSelect();
-  displayTickets();
-  updateStats();
-}
-init();
+updateTable();
 </script>
-
 </body>
 </html>
