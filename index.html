@@ -5,15 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sistema de Chamados - EmailJS + Export</title>
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-  <!-- SheetJS (XLSX) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- jsPDF + autoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
@@ -33,7 +28,6 @@
 <body class="bg-gray-100 text-gray-800">
 
 <div class="min-h-screen">
-  <!-- header -->
   <header class="bg-orange-600 text-white shadow">
     <div class="container mx-auto px-4 py-4 flex items-center justify-between">
       <div>
@@ -47,11 +41,8 @@
     </div>
   </header>
 
-  <!-- main -->
   <main class="container mx-auto px-4 py-6">
-    <!-- Tickets view -->
     <section id="tabTickets" class="space-y-6">
-      <!-- Stats -->
       <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
         <div id="cardTotal" class="bg-white p-4 rounded shadow text-center">
           <h4 class="text-sm text-gray-500">Total</h4>
@@ -71,7 +62,6 @@
         </div>
       </div>
 
-      <!-- Actions (search, filters, buttons) -->
       <div class="bg-white p-4 rounded shadow flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
           <div class="relative">
@@ -107,7 +97,6 @@
         </div>
       </div>
 
-      <!-- tickets table -->
       <div class="bg-white rounded shadow overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
@@ -127,7 +116,6 @@
       </div>
     </section>
 
-    <!-- Config tab -->
     <section id="tabConfig" class="hidden space-y-6">
       <div class="bg-white p-4 rounded shadow">
         <h3 class="text-lg font-semibold mb-2">Configurações de E-mail (EmailJS)</h3>
@@ -185,7 +173,6 @@
   </main>
 </div>
 
-<!-- Modal: create/edit/view -->
 <div id="ticketModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-lg w-full max-w-2xl p-6">
     <div class="flex items-center justify-between mb-4">
@@ -251,8 +238,8 @@
 
 <script>
 /* =========================
-   Persistence keys & defaults
-   ========================= */
+    Persistence keys & defaults
+    ========================= */
 const STORAGE_KEY = "tickets_v1";
 const CFG_KEY = "tickets_cfg_v1";
 
@@ -322,8 +309,8 @@ const exportPDFBtn = document.getElementById("exportPDF");
 const exportCSVBtn = document.getElementById("exportCSV");
 
 /* =========================
-   Email helpers (EmailJS)
-   ========================= */
+    Email helpers (EmailJS)
+    ========================= */
 function ensureEmailInit() {
   if (cfg.publicKey) {
     try { emailjs.init(cfg.publicKey); } catch(e){ /* ignore */ }
@@ -364,8 +351,8 @@ function notifyClient(clientEmail, subject, body) {
 }
 
 /* =========================
-   Tab navigation
-   ========================= */
+    Tab navigation
+    ========================= */
 function showTab(name) {
   if (name === "tickets") { tabs.tickets.classList.remove("hidden"); tabs.config.classList.add("hidden"); }
   else { tabs.tickets.classList.add("hidden"); tabs.config.classList.remove("hidden"); }
@@ -374,8 +361,8 @@ btnTabTickets.addEventListener("click", () => showTab("tickets"));
 btnTabConfig.addEventListener("click", () => showTab("config"));
 
 /* =========================
-   Config UI
-   ========================= */
+    Config UI
+    ========================= */
 function loadCfgToUI() {
   cfgServiceId.value = cfg.serviceId || "";
   cfgTemplateId.value = cfg.templateId || "";
@@ -428,8 +415,8 @@ saveTechBtn.addEventListener("click", () => {
 });
 
 /* =========================
-   Technicians select
-   ========================= */
+    Technicians select
+    ========================= */
 function getTechnicians() {
   const raw = cfg.technicians || "";
   return raw.split(",").map(s => s.trim()).filter(Boolean);
@@ -447,8 +434,8 @@ function populateTechniciansSelect() {
 populateTechniciansSelect();
 
 /* =========================
-   Stats utils
-   ========================= */
+    Stats utils
+    ========================= */
 function animateCard(card) {
   card.classList.remove("highlight");
   void card.offsetWidth;
@@ -474,8 +461,8 @@ function updateStats() {
 }
 
 /* =========================
-   Render tickets list
-   ========================= */
+    Render tickets list
+    ========================= */
 function escapeHtml(str) {
   if (!str) return "";
   return String(str)
@@ -529,7 +516,7 @@ function displayTickets() {
       <td class="px-4 py-3 space-x-1">
         ${ticket.status !== "resolved" ? `<button class="closeBtn bg-green-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-check mr-1"></i>Encerrar</button>` : ""}
         <button class="viewBtn bg-blue-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-eye mr-1"></i>Ver</button>
-        <button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>
+        ${ticket.status !== "resolved" ? `<button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>` : ""}
       </td>
     `;
 
@@ -549,10 +536,12 @@ function displayTickets() {
       openModalForTicket(ticket, { viewOnly: true });
     });
 
-    tr.querySelector(".editBtn").addEventListener("click", () => {
-      editingTicketId = ticket.id;
-      openModalForTicket(ticket, { viewOnly: false });
-    });
+    if (tr.querySelector(".editBtn")) {
+      tr.querySelector(".editBtn").addEventListener("click", () => {
+        editingTicketId = ticket.id;
+        openModalForTicket(ticket, { viewOnly: false });
+      });
+    }
 
     ticketsList.appendChild(tr);
   });
@@ -561,8 +550,8 @@ function displayTickets() {
 }
 
 /* =========================
-   Modal handling: create/edit/view
-   ========================= */
+    Modal handling: create/edit/view
+    ========================= */
 function openModalForTicket(ticket = null, { viewOnly = false } = {}) {
   const subjectEl = document.getElementById("subject");
   const priorityEl = document.getElementById("priority");
@@ -608,8 +597,8 @@ closeTicketModal.addEventListener("click", () => ticketModal.classList.add("hidd
 cancelTicketBtn.addEventListener("click", () => ticketModal.classList.add("hidden"));
 
 /* =========================
-   submit (create / edit)
-   ========================= */
+    submit (create / edit)
+    ========================= */
 ticketForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const subject = document.getElementById("subject").value.trim();
@@ -641,7 +630,8 @@ ticketForm.addEventListener("submit", async (e) => {
 
     // notificar internals
     notifyInternals(`Chamado Editado - ID ${t.id}`, `O chamado ID ${t.id} foi editado.\nAssunto: ${t.subject}\nCliente: ${t.clientName}\nPrioridade: ${t.priority}`)
-      .then(()=>{}).catch(()=>{});
+      .then(()=>{})
+      .catch(()=>{});
 
     alert("Chamado atualizado.");
   } else {
@@ -674,15 +664,15 @@ ticketForm.addEventListener("submit", async (e) => {
 });
 
 /* =========================
-   Filters & search
-   ========================= */
+    Filters & search
+    ========================= */
 searchInput.addEventListener("input", displayTickets);
 statusFilter.addEventListener("change", displayTickets);
 priorityFilter.addEventListener("change", displayTickets);
 
 /* =========================
-   Generate report (exports)
-   ========================= */
+    Generate report (exports)
+    ========================= */
 generateReportBtn.addEventListener("click", (e) => {
   exportMenu.classList.toggle("hidden");
 });
@@ -781,8 +771,8 @@ exportPDFBtn.addEventListener("click", () => {
 });
 
 /* =========================
-   Bootstrap: display, load cfg into UI
-   ========================= */
+    Bootstrap: display, load cfg into UI
+    ========================= */
 function init() {
   loadCfgToUI();
   populateTechniciansSelect();
@@ -791,20 +781,6 @@ function init() {
   ensureEmailInit();
 }
 init();
-
-/* =========================
-   Small improvements: populate technician select inside modal on open
-   ========================= */
-function populateTechniciansSelect() {
-  const sel = document.getElementById("technician");
-  sel.innerHTML = "<option value=''>Selecione</option>";
-  getTechnicians().forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    sel.appendChild(opt);
-  });
-}
 
 </script>
 
