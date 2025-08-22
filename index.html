@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sistema de Chamados - EmailJS + Export</title>
+  <title>Sistema de Chamados - SQLite</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
@@ -11,6 +11,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
 
   <style>
     ::-webkit-scrollbar { width: 8px; }
@@ -237,18 +239,17 @@
 </div>
 
 <script>
+// A nova lógica JavaScript para usar o SQLite
+let db;
+
 /* =========================
-    Persistence keys & defaults
+    Configurações e referências
     ========================= */
-const STORAGE_KEY = "tickets_v1";
 const CFG_KEY = "tickets_cfg_v1";
 
-function loadTickets() { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-function saveTickets(t) { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); }
 function loadCfg() { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); }
 function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
 
-let tickets = loadTickets();
 let cfg = Object.assign({
   serviceId: "",
   templateId: "",
@@ -260,7 +261,8 @@ let cfg = Object.assign({
 }, loadCfg());
 let editingTicketId = null;
 let prevStats = { total: -1, open: -1, inProgress: -1, resolved: -1 };
-/* DOM refs */
+
+/* Referências DOM (mantidas do código original) */
 const tabs = { tickets: document.getElementById("tabTickets"), config: document.getElementById("tabConfig") };
 const btnTabTickets = document.getElementById("tabTicketsBtn");
 const btnTabConfig = document.getElementById("tabConfigBtn");
@@ -268,7 +270,6 @@ const ticketsList = document.getElementById("ticketsList");
 const searchInput = document.getElementById("searchInput");
 const statusFilter = document.getElementById("statusFilter");
 const priorityFilter = document.getElementById("priorityFilter");
-
 const statTotal = document.getElementById("statTotal");
 const statOpen = document.getElementById("statOpen");
 const statInProgress = document.getElementById("statInProgress");
@@ -277,7 +278,6 @@ const cardTotal = document.getElementById("cardTotal");
 const cardOpen = document.getElementById("cardOpen");
 const cardInProgress = document.getElementById("cardInProgress");
 const cardResolved = document.getElementById("cardResolved");
-
 const openTicketModalBtn = document.getElementById("openTicketModal");
 const ticketModal = document.getElementById("ticketModal");
 const closeTicketModal = document.getElementById("closeTicketModal");
@@ -285,7 +285,6 @@ const ticketForm = document.getElementById("ticketForm");
 const modalTitle = document.getElementById("modalTitle");
 const saveTicketBtn = document.getElementById("saveTicketBtn");
 const cancelTicketBtn = document.getElementById("cancelTicketBtn");
-
 const cfgServiceId = document.getElementById("cfgServiceId");
 const cfgTemplateId = document.getElementById("cfgTemplateId");
 const cfgPublicKey = document.getElementById("cfgPublicKey");
@@ -298,12 +297,93 @@ const resetConfigBtn = document.getElementById("resetConfigBtn");
 const configMsg = document.getElementById("configMsg");
 const saveTechBtn = document.getElementById("saveTechBtn");
 const techMsg = document.getElementById("techMsg");
-
 const exportMenu = document.getElementById("exportMenu");
 const generateReportBtn = document.getElementById("generateReportBtn");
 const exportExcelBtn = document.getElementById("exportExcel");
 const exportPDFBtn = document.getElementById("exportPDF");
 const exportCSVBtn = document.getElementById("exportCSV");
+
+/* =========================
+    Inicialização do Banco de Dados SQLite
+    ========================= */
+async function initDatabase() {
+  try {
+    const SQL = await initSqlJs({
+      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+    });
+    db = new SQL.Database();
+    
+    // Cria a tabela de chamados se ela não existir
+    db.run(`
+      CREATE TABLE IF NOT EXISTS tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
+        priority TEXT,
+        technician TEXT,
+        status TEXT,
+        clientName TEXT NOT NULL,
+        clientEmail TEXT NOT NULL,
+        description TEXT,
+        date TEXT
+      );
+    `);
+  } catch (err) {
+    console.error("Erro ao inicializar o banco de dados:", err);
+    alert("Erro ao carregar o banco de dados. As funcionalidades de chamados não estarão disponíveis.");
+  }
+}
+
+/* =========================
+    Funções de acesso a dados (agora usando SQL)
+    ========================= */
+function getTicketsFromDB() {
+  const res = db.exec("SELECT * FROM tickets ORDER BY id DESC");
+  if (!res.length) return [];
+  const tickets = res[0].values.map(row => {
+    const obj = {};
+    res[0].columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
+  return tickets;
+}
+
+function saveTicketToDB(ticket) {
+  db.run(`
+    INSERT INTO tickets (subject, priority, technician, status, clientName, clientEmail, description, date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    ticket.subject,
+    ticket.priority,
+    ticket.technician,
+    ticket.status,
+    ticket.clientName,
+    ticket.clientEmail,
+    ticket.description,
+    ticket.date
+  ]);
+  // Reordena para pegar o novo ID
+  const lastTicket = db.exec("SELECT id FROM tickets ORDER BY id DESC LIMIT 1");
+  return lastTicket[0].values[0][0];
+}
+
+function updateTicketInDB(ticket) {
+  db.run(`
+    UPDATE tickets
+    SET subject = ?, priority = ?, technician = ?, status = ?, clientName = ?, clientEmail = ?, description = ?
+    WHERE id = ?
+  `, [
+    ticket.subject,
+    ticket.priority,
+    ticket.technician,
+    ticket.status,
+    ticket.clientName,
+    ticket.clientEmail,
+    ticket.description,
+    ticket.id
+  ]);
+}
 
 /* =========================
     Email helpers (EmailJS)
@@ -320,23 +400,18 @@ function sendEmailRaw({ to, subject, body }) {
     return Promise.resolve("not-configured");
   }
   ensureEmailInit();
-
-  // EmailJS templates usually accept named variables. We pass common ones.
   const templateParams = {
     to_email: to,
     subject: subject,
     message: body,
-    // additional helpers if needed:
     site: window.location.origin
   };
-  // emailjs.send returns a promise
   return emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
 }
 
 function notifyInternals(subject, body) {
   if (!cfg.internals) return Promise.resolve("no-internals");
   const list = cfg.internals.split(",").map(s => s.trim()).filter(Boolean);
-  // send to each internal separately (best-effort)
   const promises = list.map(to => sendEmailRaw({ to, subject, body }).catch(e => e));
   return Promise.allSettled(promises);
 }
@@ -432,11 +507,12 @@ function animateCard(card) {
   void card.offsetWidth;
   card.classList.add("highlight");
 }
-function updateStats() {
-  const total = tickets.length;
-  const open = tickets.filter(t => t.status === "open").length;
-  const inProgress = tickets.filter(t => t.status === "in-progress").length;
-  const resolved = tickets.filter(t => t.status === "resolved").length;
+async function updateStats() {
+  const total = db.exec("SELECT COUNT(*) AS count FROM tickets")[0].values[0][0];
+  const open = db.exec("SELECT COUNT(*) AS count FROM tickets WHERE status = 'open'")[0].values[0][0];
+  const inProgress = db.exec("SELECT COUNT(*) AS count FROM tickets WHERE status = 'in-progress'")[0].values[0][0];
+  const resolved = db.exec("SELECT COUNT(*) AS count FROM tickets WHERE status = 'resolved'")[0].values[0][0];
+
   if (total !== prevStats.total) animateCard(cardTotal);
   if (open !== prevStats.open) animateCard(cardOpen);
   if (inProgress !== prevStats.inProgress) animateCard(cardInProgress);
@@ -467,17 +543,38 @@ function getFilteredTickets() {
   const statusTerm = statusFilter.value;
   const priorityTerm = priorityFilter.value;
 
-  return tickets.filter(ticket => {
-    const matchSearch =
-      ticket.subject.toLowerCase().includes(searchTerm) ||
-      ticket.clientName.toLowerCase().includes(searchTerm) ||
-      (ticket.clientEmail || "").toLowerCase().includes(searchTerm) ||
-      (ticket.technician || "").toLowerCase().includes(searchTerm) ||
-      (ticket.description || "").toLowerCase().includes(searchTerm);
-    const matchStatus = statusTerm ? ticket.status === statusTerm : true;
-    const matchPriority = priorityTerm ? ticket.priority === priorityTerm : true;
-    return matchSearch && matchStatus && matchPriority;
+  const whereClauses = [];
+  const params = [];
+
+  if (searchTerm) {
+    whereClauses.push(`(subject LIKE ? OR clientName LIKE ? OR clientEmail LIKE ? OR technician LIKE ? OR description LIKE ?)`);
+    const term = `%${searchTerm}%`;
+    params.push(term, term, term, term, term);
+  }
+
+  if (statusTerm) {
+    whereClauses.push("status = ?");
+    params.push(statusTerm);
+  }
+
+  if (priorityTerm) {
+    whereClauses.push("priority = ?");
+    params.push(priorityTerm);
+  }
+
+  const whereString = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  const sql = `SELECT * FROM tickets ${whereString} ORDER BY id DESC`;
+  
+  const res = db.exec(sql, params);
+  if (!res.length) return [];
+  const tickets = res[0].values.map(row => {
+    const obj = {};
+    res[0].columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
   });
+  return tickets;
 }
 
 function displayTickets() {
@@ -510,8 +607,7 @@ function displayTickets() {
     if (ticket.status !== "resolved") {
       tr.querySelector(".closeBtn").addEventListener("click", async () => {
         ticket.status = "resolved";
-        saveTickets(tickets);
-        // notify internals and client (best-effort)
+        updateTicketInDB(ticket);
         notifyInternals(cfg.subjectClose, `Chamado ID ${ticket.id} encerrado.\nAssunto: ${ticket.subject}`).catch(()=>{});
         notifyClient(ticket.clientEmail, cfg.subjectClose, `Olá ${ticket.clientName},\n\nSeu chamado (ID ${ticket.id}) foi encerrado.\nAssunto: ${ticket.subject}\n\nObrigado.`).catch(()=>{});
         displayTickets();
@@ -602,9 +698,9 @@ ticketForm.addEventListener("submit", async (e) => {
 
   if (editingTicketId) {
     // edição
-    const t = tickets.find(x => x.id === editingTicketId);
+    const [t] = getTicketsFromDB().filter(x => x.id === editingTicketId);
     if (!t) { alert("Chamado não encontrado."); ticketModal.classList.add("hidden"); return; }
-
+    
     t.subject = subject;
     t.priority = priority;
     t.technician = technician;
@@ -612,17 +708,16 @@ ticketForm.addEventListener("submit", async (e) => {
     t.clientName = clientName;
     t.clientEmail = clientEmail;
     t.description = description;
-    saveTickets(tickets);
-    // notificar internals
+    
+    updateTicketInDB(t);
+    
     notifyInternals(`Chamado Editado - ID ${t.id}`, `O chamado ID ${t.id} foi editado.\nAssunto: ${t.subject}\nCliente: ${t.clientName}\nPrioridade: ${t.priority}`)
       .then(()=>{})
       .catch(()=>{});
     alert("Chamado atualizado.");
   } else {
     // criação
-    const newId = tickets.length ? Math.max(...tickets.map(x => x.id)) + 1 : 1;
     const newTicket = {
-      id: newId,
       subject,
       priority,
       technician,
@@ -632,10 +727,9 @@ ticketForm.addEventListener("submit", async (e) => {
       description,
       date: new Date().toLocaleDateString()
     };
-    tickets.push(newTicket);
-    saveTickets(tickets);
+    const newId = saveTicketToDB(newTicket);
+    newTicket.id = newId;
 
-    // notificar internals + confirmar para cliente (ambos best-effort)
     notifyInternals(cfg.subjectOpen || "Novo Chamado Aberto", `Novo chamado ID ${newTicket.id}\nAssunto: ${newTicket.subject}\nCliente: ${newTicket.clientName}\nPrioridade: ${newTicket.priority}`).catch(()=>{});
     notifyClient(newTicket.clientEmail, cfg.subjectOpen || "Seu chamado foi recebido", `Olá ${newTicket.clientName},\n\nRecebemos seu chamado (ID ${newTicket.id}).\nAssunto: ${newTicket.subject}\nTécnico: ${newTicket.technician}\n\nResponderemos em breve.`).catch(()=>{});
     alert("Chamado criado com sucesso.");
@@ -645,26 +739,28 @@ ticketForm.addEventListener("submit", async (e) => {
   editingTicketId = null;
   displayTickets();
 });
+
 /* =========================
     Filters & search
     ========================= */
 searchInput.addEventListener("input", displayTickets);
 statusFilter.addEventListener("change", displayTickets);
 priorityFilter.addEventListener("change", displayTickets);
+
 /* =========================
     Generate report (exports)
     ========================= */
 generateReportBtn.addEventListener("click", (e) => {
   exportMenu.classList.toggle("hidden");
 });
-// click outside to close export menu
+
 document.addEventListener("click", (ev) => {
   if (!generateReportBtn.contains(ev.target) && !exportMenu.contains(ev.target)) {
     exportMenu.classList.add("hidden");
   }
 });
+
 function getVisibleRowsForExport() {
-  // Return array of objects with the table columns
   const filtered = getFilteredTickets();
   return filtered.map(t => ({
     ID: t.id,
@@ -688,8 +784,6 @@ function timestampFileName(ext) {
 exportExcelBtn.addEventListener("click", () => {
   const rows = getVisibleRowsForExport();
   if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
-
-  // Convert to worksheet
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Chamados");
@@ -703,6 +797,7 @@ exportExcelBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
   exportMenu.classList.add("hidden");
 });
+
 exportCSVBtn.addEventListener("click", () => {
   const rows = getVisibleRowsForExport();
   if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
@@ -722,11 +817,8 @@ exportCSVBtn.addEventListener("click", () => {
 exportPDFBtn.addEventListener("click", () => {
   const rows = getVisibleRowsForExport();
   if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
-
-  // Build columns and data for autoTable
   const columns = Object.keys(rows[0]);
   const data = rows.map(r => columns.map(c => String(r[c])));
-  // Using jspdf from UMD (window.jspdf)
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape', 'pt', 'a4');
   doc.setFontSize(14);
@@ -747,7 +839,8 @@ exportPDFBtn.addEventListener("click", () => {
 /* =========================
     Bootstrap: display, load cfg into UI
     ========================= */
-function init() {
+async function init() {
+  await initDatabase();
   loadCfgToUI();
   populateTechniciansSelect();
   displayTickets();
