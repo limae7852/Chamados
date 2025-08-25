@@ -81,6 +81,7 @@
             <option value="low">Baixa</option>
             <option value="medium">Média</option>
             <option value="high">Alta</option>
+            <option value="critical">Crítica</option>
           </select>
         </div>
 
@@ -194,6 +195,7 @@ Utilizado no formulário de chamados.</p>
             <option value="low">Baixa</option>
             <option value="medium">Média</option>
             <option value="high">Alta</option>
+            <option value="critical">Crítica</option>
           </select>
         </label>
 
@@ -243,19 +245,18 @@ const STORAGE_KEY = "tickets_v1";
 const CFG_KEY = "tickets_cfg_v1";
 
 // ** SHAREPOINT CONFIGURATION **
-const SHAREPOINT_SITE_URL = "https://arcelormittal-my.sharepoint.com/personal/97613371_amdistribuicao_com_br/Lists/Chamados/AllItems.aspx?viewid=61e99fd5%2D2ac8%2D412c%2D9b57%2Dedfc2dee8250&env=WebViewList&startedResponseCatch=true"; // Replace with your SharePoint site URL
-const SHAREPOINT_LIST_NAME = "Chamados"; // Replace with the name of your SharePoint list
+const SHAREPOINT_SITE_URL = "https://arcelormittal-my.sharepoint.com/personal/97613371_amdistribuicao_com_br/Lists/Chamados"; // EX: https://suaempresa.sharepoint.com/sites/SeuSite
+const SHAREPOINT_LIST_NAME = "Chamados"; // EX: Chamados
 
 // Mapeie os nomes das colunas da sua lista do SharePoint para os campos do formulário.
-// Exemplo: 'Title' é a coluna padrão do SharePoint para o Assunto.
 const SHAREPOINT_FIELDS_MAP = {
-  subject: "Assunto",
+  subject: "Assunto", // 'Title' é a coluna padrão do SharePoint para o Assunto
   priority: "Prioridade",
   technician: "Técnico",
   status: "Status do Chamado",
-  clientName: "Nome do Usuário",
+  clientName: "Nome do Usuario",
   clientEmail: "E-mail do Usuário",
-  description: "Descrição do Problema"
+  description: "Descricão do Problema"
 };
 
 // --- Funções de persistência adaptadas para SharePoint ---
@@ -286,10 +287,11 @@ async function loadTickets() {
 
 async function saveTicketToSharePoint(ticketData) {
   const url = `${SHAREPOINT_SITE_URL}/_api/web/lists/GetByTitle('${SHAREPOINT_LIST_NAME}')/items`;
+  // O Request Digest é essencial para segurança em requisições POST/PUT/DELETE
   const headers = {
     "Accept": "application/json;odata=verbose",
     "Content-Type": "application/json;odata=verbose",
-    "X-RequestDigest": document.getElementById("__REQUESTDIGEST").value || "" // Essential for security
+    "X-RequestDigest": document.getElementById("__REQUESTDIGEST")?.value || "" 
   };
   const body = {
     "__metadata": { "type": `SP.Data.${SHAREPOINT_LIST_NAME.replace(/ /g, '_x0020_')}ListItem` },
@@ -319,8 +321,7 @@ async function saveTicketToSharePoint(ticketData) {
   }
 }
 
-// O código de persistência local foi mantido para fins de fallback,
-// mas a lógica de criação agora prioriza o SharePoint.
+// O código de persistência local foi removido para priorizar o SharePoint.
 function loadCfg() { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); }
 function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
 
@@ -398,22 +399,18 @@ function sendEmailRaw({ to, subject, body }) {
   }
   ensureEmailInit();
 
-  // EmailJS templates usually accept named variables. We pass common ones.
   const templateParams = {
     to_email: to,
     subject: subject,
     message: body,
-    // additional helpers if needed:
     site: window.location.origin
   };
-  // emailjs.send returns a promise
   return emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
 }
 
 function notifyInternals(subject, body) {
   if (!cfg.internals) return Promise.resolve("no-internals");
   const list = cfg.internals.split(",").map(s => s.trim()).filter(Boolean);
-  // send to each internal separately (best-effort)
   const promises = list.map(to => sendEmailRaw({ to, subject, body }).catch(e => e));
   return Promise.allSettled(promises);
 }
@@ -486,8 +483,7 @@ saveTechBtn.addEventListener("click", () => {
     Technicians select
     ========================= */
 function getTechnicians() {
-  const raw = cfg.technicians ||
-"";
+  const raw = cfg.technicians || "";
   return raw.split(",").map(s => s.trim()).filter(Boolean);
 }
 function populateTechniciansSelect() {
@@ -552,8 +548,7 @@ function getFilteredTickets() {
       (ticket.clientEmail || "").toLowerCase().includes(searchTerm) ||
       (ticket.technician || "").toLowerCase().includes(searchTerm) ||
       (ticket.description || "").toLowerCase().includes(searchTerm);
-    const matchStatus = statusTerm 
-? ticket.status === statusTerm : true;
+    const matchStatus = statusTerm ? ticket.status === statusTerm : true;
     const matchPriority = priorityTerm ? ticket.priority === priorityTerm : true;
     return matchSearch && matchStatus && matchPriority;
   });
@@ -580,23 +575,17 @@ function displayTickets() {
       <td class="px-4 py-3 capitalize">${ticket.priority}</td>
       <td class="px-4 py-3 capitalize">${ticket.status.replace("-", " ")}</td>
       <td class="px-4 py-3">${ticket.date}</td>
-      <td class="px-4 py-3 
-space-x-1">
+      <td class="px-4 py-3 space-x-1">
         ${ticket.status !== "resolved" ? `<button class="closeBtn bg-green-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-check mr-1"></i>Encerrar</button>` : ""}
         <button class="viewBtn bg-blue-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-eye mr-1"></i>Ver</button>
-        ${ticket.status !== "resolved" ?
-`<button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>` : ""}
+        ${ticket.status !== "resolved" ? `<button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>` : ""}
       </td>
     `;
     if (ticket.status !== "resolved") {
       tr.querySelector(".closeBtn").addEventListener("click", async () => {
-        ticket.status = "resolved";
-        // saveTickets(tickets); // Removido
-        // Adicionar lógica de atualização no SharePoint aqui
-        displayTickets();
+        // Lógica para encerrar no SharePoint
         alert(`Chamado ID ${ticket.id} encerrado.`);
-      
-});
+      });
     }
 
     tr.querySelector(".viewBtn").addEventListener("click", () => {
@@ -628,8 +617,7 @@ function openModalForTicket(ticket = null, { viewOnly = false } = {}) {
   const descriptionEl = document.getElementById("description");
 
   if (ticket) {
-    modalTitle.textContent = viewOnly ?
-`Visualizar Chamado #${ticket.id}` : `Editar Chamado #${ticket.id}`;
+    modalTitle.textContent = viewOnly ? `Visualizar Chamado #${ticket.id}` : `Editar Chamado #${ticket.id}`;
     subjectEl.value = ticket.subject;
     priorityEl.value = ticket.priority;
     technicianEl.value = ticket.technician;
@@ -683,8 +671,7 @@ ticketForm.addEventListener("submit", async (e) => {
 
   if (editingTicketId) {
     // edição
-    const t = tickets.find(x => 
-x.id === editingTicketId);
+    const t = tickets.find(x => x.id === editingTicketId);
     if (!t) { alert("Chamado não encontrado."); ticketModal.classList.add("hidden"); return; }
 
     t.subject = subject;
@@ -694,7 +681,9 @@ x.id === editingTicketId);
     t.clientName = clientName;
     t.clientEmail = clientEmail;
     t.description = description;
+
     // Lógica para salvar a edição no SharePoint aqui
+    
     notifyInternals(`Chamado Editado - ID ${t.id}`, `O chamado ID ${t.id} foi editado.\nAssunto: ${t.subject}\nCliente: ${t.clientName}\nPrioridade: ${t.priority}`)
       .then(()=>{})
       .catch(()=>{});
@@ -808,7 +797,7 @@ exportPDFBtn.addEventListener("click", () => {
   const rows = getVisibleRowsForExport();
   if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
 
-  // Build columns 
+  // Build columns and data for autoTable
   const columns = Object.keys(rows[0]);
   const data = rows.map(r => columns.map(c => String(r[c])));
   // Using jspdf from UMD (window.jspdf)
