@@ -75,7 +75,7 @@
             <option value="">Todos os status</option>
             <option value="open">Aberto</option>
             <option value="in-progress">Em andamento</option>
-            <option value="resolved">Resolvido</option>
+            <option value="resolved">Concluído</option>
           </select>
 
           <select id="priorityFilter" class="border rounded px-3 py-2">
@@ -83,7 +83,6 @@
             <option value="low">Baixa</option>
             <option value="medium">Média</option>
             <option value="high">Alta</option>
-            <option value="critical">Crítica</option>
           </select>
         </div>
 
@@ -165,7 +164,7 @@
       <div class="bg-white p-4 rounded shadow">
         <h3 class="text-lg font-semibold mb-2">Lista de Técnicos</h3>
         <p class="text-sm text-gray-600 mb-2">Editar lista de técnicos (separados por vírgula). Utilizado no formulário de chamados.</p>
-        <textarea id="cfgTechnicians" class="w-full border rounded p-2" rows="2" placeholder="João Silva, Maria Oliveira, Ana Costa"></textarea>
+        <textarea id="cfgTechnicians" class="w-full border rounded p-2" rows="2" placeholder="Eduardo Lima"></textarea>
         <div class="mt-2">
           <button id="saveTechBtn" class="bg-green-600 text-white px-4 py-2 rounded">Salvar Técnicos</button>
           <span id="techMsg" class="text-sm text-green-600 ml-3 hidden">Técnicos salvos.</span>
@@ -196,7 +195,6 @@
             <option value="low">Baixa</option>
             <option value="medium">Média</option>
             <option value="high">Alta</option>
-            <option value="critical">Crítica</option>
           </select>
         </label>
 
@@ -210,17 +208,17 @@
           <select id="status" class="mt-1 block w-full border rounded px-3 py-2">
             <option value="open">Aberto</option>
             <option value="in-progress">Em andamento</option>
-            <option value="resolved">Resolvido</option>
+            <option value="resolved">Concluído</option>
           </select>
         </label>
 
         <label class="block md:col-span-2">
-          <span class="text-sm text-gray-600">Nome do Cliente *</span>
+          <span class="text-sm text-gray-600">Nome do Usuário *</span>
           <input id="clientName" required type="text" class="mt-1 block w-full border rounded px-3 py-2" />
         </label>
 
         <label class="block md:col-span-2">
-          <span class="text-sm text-gray-600">E-mail do Cliente *</span>
+          <span class="text-sm text-gray-600">E-mail do Usuário *</span>
           <input id="clientEmail" required type="email" class="mt-1 block w-full border rounded px-3 py-2" />
         </label>
       </div>
