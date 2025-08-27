@@ -3,47 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Chamados</title>
+  <title>Sistema de Chamados - SharePoint</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.emailjs.com/sdk/3.11.0/email.min.js"></script>
+  <!-- MSAL -->
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 </head>
-<body class="bg-gray-100 p-6">
-  <h1 class="text-2xl font-bold mb-4">📌 Sistema de Chamados</h1>
+<body class="bg-gray-100 min-h-screen">
+  <div class="p-6">
+    <h1 class="text-2xl font-bold mb-4">📌 Sistema de Chamados</h1>
 
-  <!-- Botões principais -->
-  <div class="space-x-2 mb-4">
-    <button id="loginBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Entrar com Microsoft</button>
-    <button id="newTicketBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Novo Chamado</button>
-    <button id="exportExcelBtn" class="bg-yellow-500 text-white px-4 py-2 rounded-lg">Exportar Excel</button>
-    <button id="exportPdfBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Exportar PDF</button>
+    <!-- Botão Login -->
+    <button id="loginBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg mb-4">Entrar com Microsoft</button>
+
+    <!-- Botões de Ações -->
+    <div class="space-x-2 mb-4">
+      <button onclick="openModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg">Abrir Chamado</button>
+      <button onclick="exportExcel()" class="bg-yellow-500 text-white px-4 py-2 rounded-lg">Exportar Excel</button>
+      <button onclick="exportPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Exportar PDF</button>
+    </div>
+
+    <!-- Lista de Chamados -->
+    <table class="w-full bg-white shadow rounded-lg" id="ticketsTable">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="p-2">ID</th>
+          <th class="p-2">Título</th>
+          <th class="p-2">Descrição</th>
+          <th class="p-2">Status</th>
+          <th class="p-2">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="ticketsBody"></tbody>
+    </table>
   </div>
 
-  <!-- Tabela de chamados -->
-  <table class="w-full bg-white shadow-md rounded-lg" id="ticketsTable">
-    <thead class="bg-gray-200">
-      <tr>
-        <th class="p-2">ID</th>
-        <th class="p-2">Título</th>
-        <th class="p-2">Descrição</th>
-        <th class="p-2">Status</th>
-        <th class="p-2">Ações</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Modal de novo chamado -->
-  <div id="ticketModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white p-6 rounded-lg w-1/3">
+  <!-- Modal Novo Chamado -->
+  <div id="ticketModal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white p-6 rounded-lg w-96">
       <h2 class="text-xl font-bold mb-4">Novo Chamado</h2>
       <form id="ticketForm">
-        <input type="text" id="titulo" placeholder="Título" class="w-full border p-2 rounded mb-2" required>
-        <textarea id="descricao" placeholder="Descrição" class="w-full border p-2 rounded mb-2" required></textarea>
+        <input id="title" placeholder="Título" class="w-full p-2 border rounded mb-2" required>
+        <textarea id="description" placeholder="Descrição" class="w-full p-2 border rounded mb-2" required></textarea>
         <div class="flex justify-end space-x-2">
-          <button type="button" onclick="closeModal()" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded">Cancelar</button>
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Salvar</button>
         </div>
       </form>
@@ -51,129 +56,100 @@
   </div>
 
   <script>
-    // ================= CONFIGURAÇÕES =================
-    const CLIENT_ID = "SEU_CLIENT_ID";
-    const TENANT_ID = "SEU_TENANT_ID";
-    const SHAREPOINT_URL = "https://SEUSITE.sharepoint.com/sites/SUASITE";
+    // ================= CONFIG =================
+    const CLIENT_ID = "SEU_CLIENT_ID_AQUI";
+    const TENANT_ID = "SEU_TENANT_ID_AQUI";
+    const SHAREPOINT_URL = "https://SEU_TENANT.sharepoint.com/sites/SEU_SITE";
     const LIST_NAME = "Chamados";
 
-    // EmailJS
-    (function(){ emailjs.init("SEU_USER_ID_EMAILJS"); })();
+    emailjs.init("SEU_USER_ID_EMAILJS");
 
     // ================= MSAL =================
     const msalConfig = {
       auth: {
         clientId: CLIENT_ID,
         authority: `https://login.microsoftonline.com/${TENANT_ID}`,
-        redirectUri: window.location.origin
-      },
-      cache: { cacheLocation: "localStorage" }
+        redirectUri: "http://localhost:5500/"
+      }
     };
 
     const msalInstance = new msal.PublicClientApplication(msalConfig);
-    const loginRequest = { scopes: ["Sites.ReadWrite.All", "User.Read"] };
-
     let accessToken = null;
 
     async function signIn() {
-      const loginResponse = await msalInstance.loginPopup(loginRequest);
-      const tokenResponse = await msalInstance.acquireTokenSilent(loginRequest)
-        .catch(() => msalInstance.acquireTokenPopup(loginRequest));
-      accessToken = tokenResponse.accessToken;
-      return accessToken;
+      try {
+        const loginResponse = await msalInstance.loginPopup({ scopes: ["User.Read", "Sites.ReadWrite.All"] });
+        const account = loginResponse.account;
+        msalInstance.setActiveAccount(account);
+        const tokenResponse = await msalInstance.acquireTokenSilent({ scopes: ["Sites.ReadWrite.All"], account });
+        accessToken = tokenResponse.accessToken;
+        loadTickets();
+      } catch (err) {
+        console.error("Erro no login:", err);
+        alert("Falha no login Microsoft");
+      }
     }
 
+    document.getElementById("loginBtn").addEventListener("click", signIn);
+
+    // ================= SharePoint =================
     async function callSharePoint(endpoint, method = "GET", body = null) {
-      if (!accessToken) throw new Error("Usuário não autenticado");
-      const headers = {
-        "Authorization": `Bearer ${accessToken}`,
-        "Accept": "application/json;odata=verbose",
-        "Content-Type": "application/json;odata=verbose"
-      };
-      const options = { method, headers };
-      if (body) options.body = JSON.stringify(body);
-      const url = `${SHAREPOINT_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/${endpoint}`;
-      const res = await fetch(url, options);
-      if (!res.ok) throw new Error("Erro SharePoint: " + res.status);
+      const res = await fetch(`${SHAREPOINT_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/${endpoint}`, {
+        method,
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/json;odata=verbose",
+          "Content-Type": "application/json;odata=verbose"
+        },
+        body: body ? JSON.stringify(body) : null
+      });
+      if (!res.ok) throw new Error("Erro SharePoint");
       return res.json();
     }
 
-    // ================= CRUD Chamados =================
     async function loadTickets() {
-      const data = await callSharePoint("items", "GET");
-      const tbody = document.querySelector("#ticketsTable tbody");
+      const data = await callSharePoint("items");
+      const tbody = document.getElementById("ticketsBody");
       tbody.innerHTML = "";
-      data.d.results.forEach(t => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class='p-2'>${t.Id}</td>
-          <td class='p-2'>${t.Title}</td>
-          <td class='p-2'>${t.Descricao || "-"}</td>
-          <td class='p-2'>${t.Status || "Aberto"}</td>
-          <td class='p-2'>
-            <button onclick="encerrarChamado(${t.Id})" class='bg-red-500 text-white px-2 py-1 rounded'>Encerrar</button>
-          </td>`;
-        tbody.appendChild(tr);
+      data.d.results.forEach(ticket => {
+        tbody.innerHTML += `
+          <tr class='border-b'>
+            <td class='p-2'>${ticket.Id}</td>
+            <td class='p-2'>${ticket.Title}</td>
+            <td class='p-2'>${ticket.Description || ""}</td>
+            <td class='p-2'>${ticket.Status || "Aberto"}</td>
+            <td class='p-2'>
+              <button onclick="encerrarChamado(${ticket.Id})" class='bg-red-500 text-white px-2 py-1 rounded'>Encerrar</button>
+            </td>
+          </tr>`;
       });
     }
 
     async function saveTicket() {
-      const titulo = document.getElementById("titulo").value;
-      const descricao = document.getElementById("descricao").value;
-
-      const body = {
-        __metadata: { type: "SP.Data.ChamadosListItem" },
-        Title: titulo,
-        Descricao: descricao,
-        Status: "Aberto"
-      };
-
-      await callSharePoint("items", "POST", body);
-
-      emailjs.send("seu_service_id", "seu_template_id", { titulo, descricao });
-
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
+      await callSharePoint("items", "POST", { __metadata: { type: "SP.Data.ChamadosListItem" }, Title: title, Description: description, Status: "Aberto" });
+      sendEmail("Novo chamado aberto: " + title);
       loadTickets();
     }
 
     async function encerrarChamado(id) {
-      const body = {
+      await callSharePoint(`items(${id})`, "POST", {
         __metadata: { type: "SP.Data.ChamadosListItem" },
         Status: "Encerrado"
-      };
-      await callSharePoint(`items(${id})`, "MERGE", body);
-      alert("Chamado encerrado!");
+      });
+      sendEmail("Chamado encerrado ID: " + id);
       loadTickets();
     }
 
-    // ================= Exportações =================
-    function exportToExcel() {
-      const table = document.getElementById("ticketsTable");
-      const wb = XLSX.utils.table_to_book(table);
-      XLSX.writeFile(wb, "chamados.xlsx");
-    }
-
-    function exportToPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text("Relatório de Chamados", 10, 10);
-      doc.autoTable({ html: "#ticketsTable" });
-      doc.save("chamados.pdf");
+    // ================= Email =================
+    function sendEmail(message) {
+      emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", { mensagem: message });
     }
 
     // ================= Modal =================
     function openModal() { document.getElementById("ticketModal").classList.remove("hidden"); }
     function closeModal() { document.getElementById("ticketModal").classList.add("hidden"); }
-
-    // ================= Eventos =================
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      try {
-        await signIn();
-        alert("Login realizado com sucesso!");
-        loadTickets();
-      } catch (err) { alert("Erro no login: " + err.message); }
-    });
-
-    document.getElementById("newTicketBtn").addEventListener("click", openModal);
 
     document.getElementById("ticketForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -181,8 +157,20 @@
       closeModal();
     });
 
-    document.getElementById("exportExcelBtn").addEventListener("click", exportToExcel);
-    document.getElementById("exportPdfBtn").addEventListener("click", exportToPDF);
+    // ================= Export =================
+    function exportExcel() {
+      const table = document.getElementById("ticketsTable");
+      const wb = XLSX.utils.table_to_book(table);
+      XLSX.writeFile(wb, "chamados.xlsx");
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Relatório de Chamados", 10, 10);
+      doc.autoTable({ html: "#ticketsTable" });
+      doc.save("chamados.pdf");
+    }
   </script>
 </body>
 </html>
