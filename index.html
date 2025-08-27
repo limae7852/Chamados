@@ -1,270 +1,207 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Chamados Completo com Email</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-<script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
-<script type="text/javascript">
-   (function(){emailjs.init("SEU_USER_ID");})();
-</script>
-<style>
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 6px; }
-/* Highlight animation */
-@keyframes highlight { 0% { box-shadow: none } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.12) } 100% { box-shadow: none } }
-.highlight { animation: highlight 900ms ease; }
-/* Priority styles */
-.priority-low { border-left: 4px solid #10b981; }
-.priority-medium { border-left: 4px solid #f59e0b; }
-.priority-high { border-left: 4px solid #ef4444; }
-.priority-critical { border-left: 4px solid #7c3aed; }
-/* Modal colors */
-#closeModal .modal-content { background-color: #fef3c7; }
-#viewModal .modal-content { background-color: #e0f2fe; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Chamados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos de destaque */
+    @keyframes blinkHighlight {
+      0% { background-color: #fce7f3; }
+      50% { background-color: #f9a8d4; }
+      100% { background-color: #fce7f3; }
+    }
+    .blink {
+      animation: blinkHighlight 1s ease-in-out 3;
+    }
+    .highlight {
+      background-color: #bbf7d0 !important;
+      transition: background-color 1s ease;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 min-h-screen p-6">
 
-<header class="bg-orange-600 text-white shadow">
-<div class="container mx-auto px-4 py-4 flex items-center justify-between">
-<h1 class="text-xl font-bold">Sistema de Chamados</h1>
-<p class="text-orange-100 text-sm">Gerencie seus atendimentos</p>
-</div>
-</header>
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">📌 Sistema de Chamados</h1>
 
-<main class="container mx-auto px-4 py-6">
+    <!-- Formulário de abertura -->
+    <div class="bg-white p-6 rounded-2xl shadow mb-6">
+      <h2 class="text-xl font-semibold mb-4">Abrir Chamado</h2>
+      <form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input id="subject" type="text" placeholder="Assunto" class="border rounded-lg p-2" required>
+        <input id="client" type="text" placeholder="Cliente" class="border rounded-lg p-2" required>
+        <input id="tech" type="text" placeholder="Técnico Responsável" class="border rounded-lg p-2" required>
+        <select id="priority" class="border rounded-lg p-2" required>
+          <option value="">Selecione a Prioridade</option>
+          <option value="low">Baixa</option>
+          <option value="medium">Média</option>
+          <option value="high">Alta</option>
+          <option value="critical">Crítica</option>
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 col-span-1 md:col-span-2">
+          Abrir Chamado
+        </button>
+      </form>
+    </div>
 
-<!-- Formulário de abertura de chamado -->
-<div class="bg-white rounded shadow p-4 mb-6">
-<h2 class="text-lg font-semibold mb-4">Abrir Novo Chamado</h2>
-<form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-<input type="text" id="subject" placeholder="Assunto" class="border rounded px-2 py-1" required>
-<input type="text" id="clientName" placeholder="Nome do Cliente" class="border rounded px-2 py-1" required>
-<input type="email" id="clientEmail" placeholder="E-mail do Cliente" class="border rounded px-2 py-1" required>
-<input type="text" id="technician" placeholder="Técnico Responsável" class="border rounded px-2 py-1" required>
-<select id="priority" class="border rounded px-2 py-1" required>
-<option value="">Selecione Prioridade</option>
-<option value="low">Baixa</option>
-<option value="medium">Média</option>
-<option value="high">Alta</option>
-<option value="critical">Crítica</option>
-</select>
-<button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded col-span-full">Abrir Chamado</button>
-</form>
-</div>
+    <!-- Tabela de chamados -->
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-4">Chamados Abertos</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="px-4 py-2">ID</th>
+            <th class="px-4 py-2">Assunto</th>
+            <th class="px-4 py-2">Cliente</th>
+            <th class="px-4 py-2">Técnico</th>
+            <th class="px-4 py-2">Prioridade</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">Data</th>
+            <th class="px-4 py-2">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="ticketsList"></tbody>
+      </table>
+    </div>
+  </div>
 
-<!-- Filtros e export -->
-<div class="mb-4 flex gap-2 flex-wrap">
-<select id="filterStatus" class="border rounded px-2 py-1">
-<option value="">Todos os Status</option>
-<option value="open">Aberto</option>
-<option value="resolved">Encerrado</option>
-</select>
-<select id="filterPriority" class="border rounded px-2 py-1">
-<option value="">Todas as Prioridades</option>
-<option value="low">Baixa</option>
-<option value="medium">Média</option>
-<option value="high">Alta</option>
-<option value="critical">Crítica</option>
-</select>
-<select id="filterTechnician" class="border rounded px-2 py-1">
-<option value="">Todos Técnicos</option>
-</select>
-<button onclick="exportExcel()" class="bg-green-500 text-white px-3 py-1 rounded">Exportar Excel</button>
-<button onclick="exportPDF()" class="bg-blue-500 text-white px-3 py-1 rounded">Exportar PDF</button>
-</div>
+  <!-- Modal de edição -->
+  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 w-96">
+      <h2 class="text-xl font-semibold mb-4">Editar Chamado</h2>
+      <form id="editForm" class="space-y-3">
+        <input id="editSubject" type="text" class="border rounded-lg p-2 w-full">
+        <input id="editClient" type="text" class="border rounded-lg p-2 w-full">
+        <input id="editTech" type="text" class="border rounded-lg p-2 w-full">
+        <select id="editPriority" class="border rounded-lg p-2 w-full">
+          <option value="low">Baixa</option>
+          <option value="medium">Média</option>
+          <option value="high">Alta</option>
+          <option value="critical">Crítica</option>
+        </select>
+        <div class="flex justify-end space-x-2">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-<!-- Lista de chamados -->
-<div class="bg-white rounded shadow overflow-x-auto">
-<table class="min-w-full divide-y divide-gray-200">
-<thead class="bg-gray-50">
-<tr>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assunto</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Técnico</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prioridade</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
-</tr>
-</thead>
-<tbody id="ticketsList" class="bg-white divide-y divide-gray-200"></tbody>
-</table>
-</div>
-</main>
+  <!-- Modal de encerramento -->
+  <div id="closeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-pink-100 border border-pink-300 rounded-2xl p-6 w-96">
+      <h2 class="text-xl font-semibold mb-4 text-pink-700">Encerrar Chamado</h2>
+      <p class="mb-4 text-pink-800">Tem certeza que deseja encerrar este chamado?</p>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeCloseModal()" class="px-4 py-2 rounded-lg border">Cancelar</button>
+        <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded-lg bg-pink-600 text-white">Encerrar</button>
+      </div>
+    </div>
+  </div>
 
-<!-- Modal Encerrar -->
-<div id="closeModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
-<div class="modal-content rounded-lg w-full max-w-md p-6">
-<h3 class="text-lg font-semibold mb-4 text-yellow-800">Encerrar Chamado</h3>
-<p id="closeModalText" class="text-yellow-900 mb-4"></p>
-<div class="flex justify-end gap-2">
-<button onclick="closeCloseModal()" class="bg-gray-300 px-4 py-2 rounded">Cancelar</button>
-<button onclick="confirmCloseTicket()" class="bg-yellow-600 text-white px-4 py-2 rounded">Encerrar</button>
-</div>
-</div>
-</div>
+  <script>
+    let tickets = [];
+    let editTicketId = null;
+    let closeTicketId = null;
 
-<!-- Modal Visualizar -->
-<div id="viewModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
-<div class="modal-content rounded-lg w-full max-w-md p-6">
-<h3 class="text-lg font-semibold mb-4 text-blue-900">Detalhes do Chamado</h3>
-<div id="viewModalBody" class="text-gray-800 mb-4"></div>
-<div class="flex justify-end">
-<button onclick="closeViewModal()" class="bg-gray-300 px-4 py-2 rounded">Fechar</button>
-</div>
-</div>
-</div>
+    // Abrir chamado
+    document.getElementById("ticketForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      const newTicket = {
+        id: tickets.length + 1,
+        subject: document.getElementById("subject").value,
+        client: document.getElementById("client").value,
+        tech: document.getElementById("tech").value,
+        priority: document.getElementById("priority").value,
+        status: "open",
+        date: new Date().toLocaleString()
+      };
+      tickets.push(newTicket);
+      this.reset();
+      renderTickets();
+    });
 
-<script>
-let tickets = [];
-let ticketCounter = 1;
-let closeTicketId = null;
+    // Renderizar lista
+    function renderTickets(){
+      const list = document.getElementById("ticketsList");
+      list.innerHTML = "";
+      tickets.forEach(ticket => {
+        const tr = document.createElement("tr");
+        tr.classList.add(`priority-${ticket.priority}`);
+        tr.innerHTML = `
+          <td class="px-4 py-2">${ticket.id}</td>
+          <td class="px-4 py-2">${ticket.subject}</td>
+          <td class="px-4 py-2">${ticket.client}</td>
+          <td class="px-4 py-2">${ticket.tech}</td>
+          <td class="px-4 py-2 capitalize">${ticket.priority}</td>
+          <td class="px-4 py-2 capitalize">${ticket.status}</td>
+          <td class="px-4 py-2">${ticket.date}</td>
+          <td class="px-4 py-2 space-x-2">
+            <button onclick="editTicket(${ticket.id})" class="text-blue-600 hover:underline">Editar</button>
+            ${ticket.status !== "resolved" ? `<button onclick="openCloseModal(${ticket.id})" class="text-pink-600 hover:underline">Encerrar</button>` : ""}
+          </td>
+        `;
+        list.appendChild(tr);
 
-// Atualiza lista de técnicos do filtro
-function updateTechnicianFilter(){
-const techSet = new Set(tickets.map(t=>t.technician));
-let filterTechSelect = document.getElementById("filterTechnician");
-filterTechSelect.innerHTML = '<option value="">Todos Técnicos</option>';
-techSet.forEach(t=>{
-let opt=document.createElement("option"); opt.value=t; opt.textContent=t; filterTechSelect.appendChild(opt);
-});
-}
+        if(ticket.priority === "critical" && ticket.status !== "resolved") {
+          tr.classList.add("blink");
+        }
+      });
+    }
 
-// Renderiza tabela de chamados
-function renderTickets(){
-const tbody = document.getElementById("ticketsList");
-tbody.innerHTML="";
-let statusFilter=document.getElementById("filterStatus").value;
-let priorityFilter=document.getElementById("filterPriority").value;
-let techFilter=document.getElementById("filterTechnician").value;
+    // Editar chamado
+    function editTicket(id){
+      editTicketId = id;
+      const t = tickets.find(t => t.id === id);
+      if(t){
+        document.getElementById("editSubject").value = t.subject;
+        document.getElementById("editClient").value = t.client;
+        document.getElementById("editTech").value = t.tech;
+        document.getElementById("editPriority").value = t.priority;
+        document.getElementById("editModal").classList.remove("hidden");
+      }
+    }
 
-tickets.forEach(ticket=>{
-if((!statusFilter || ticket.status===statusFilter) &&
-(!priorityFilter || ticket.priority===priorityFilter) &&
-(!techFilter || ticket.technician===techFilter)){
-const tr=document.createElement("tr");
-tr.className=`priority-${ticket.priority}`;
-tr.innerHTML=`
-<td class="px-4 py-3">${ticket.id}</td>
-<td class="px-4 py-3 font-medium">${ticket.subject}</td>
-<td class="px-4 py-3">${ticket.clientName}<div class="text-xs text-gray-400">${ticket.clientEmail}</div></td>
-<td class="px-4 py-3">${ticket.technician}</td>
-<td class="px-4 py-3 capitalize">${ticket.priority}</td>
-<td class="px-4 py-3 capitalize">${ticket.status.replace("-", " ")}</td>
-<td class="px-4 py-3">${ticket.date}</td>
-<td class="px-4 py-3 space-x-1">
-${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:""}
-<button onclick="openViewModal(${ticket.id})" class="text-blue-600 hover:underline">Ver</button>
-</td>
-`;
-tbody.appendChild(tr);
-}
-});
-updateTechnicianFilter();
-}
+    document.getElementById("editForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      const t = tickets.find(t => t.id === editTicketId);
+      if(t){
+        t.subject = document.getElementById("editSubject").value;
+        t.client = document.getElementById("editClient").value;
+        t.tech = document.getElementById("editTech").value;
+        t.priority = document.getElementById("editPriority").value;
+        renderTickets();
+        closeEditModal();
+      }
+    });
 
-// Função para enviar e-mail via EmailJS
-function sendEmail(template, data){
-emailjs.send('SEU_SERVICE_ID', template, data)
-.then(()=>console.log("E-mail enviado com sucesso"))
-.catch(err=>console.error("Erro ao enviar e-mail:", err));
-}
+    function closeEditModal(){
+      document.getElementById("editModal").classList.add("hidden");
+    }
 
-// Formulário de abertura
-document.getElementById("ticketForm").addEventListener("submit", function(e){
-e.preventDefault();
-const subject = document.getElementById("subject").value;
-const clientName = document.getElementById("clientName").value;
-const clientEmail = document.getElementById("clientEmail").value;
-const technician = document.getElementById("technician").value;
-const priority = document.getElementById("priority").value;
-const date = new Date().toLocaleDateString('pt-BR');
-tickets.push({id: ticketCounter++, subject, clientName, clientEmail, technician, priority, status:"open", date});
-this.reset();
-renderTickets();
+    // Encerrar chamado
+    function openCloseModal(id){
+      closeTicketId = id;
+      document.getElementById("closeModal").classList.remove("hidden");
+    }
 
-// Enviar e-mail de abertura
-sendEmail('template_abertura',{
-to_name: technician,
-client_name: clientName,
-subject: subject,
-priority: priority,
-client_email: clientEmail
-});
-});
+    function closeCloseModal(){
+      document.getElementById("closeModal").classList.add("hidden");
+    }
 
-// Modal Encerrar
-function openCloseModal(id){
-closeTicketId=id;
-const ticket=tickets.find(t=>t.id===id);
-document.getElementById("closeModalText").textContent=`Deseja realmente encerrar o chamado #${ticket.id} - ${ticket.subject}?`;
-document.getElementById("closeModal").classList.remove("hidden");
-}
-function closeCloseModal(){ closeTicketId=null; document.getElementById("closeModal").classList.add("hidden"); }
-function confirmCloseTicket(){
-if(closeTicketId!==null){
-const t=tickets.find(t=>t.id===Number(closeTicketId));
-if(t){ t.status="resolved";
-document.querySelectorAll("#ticketsList tr").forEach(row=>{ if(Number(row.children[0].textContent)===t.id){ row.classList.add("highlight"); }});
-closeCloseModal();
-renderTickets();
-alert(`Chamado #${t.id} encerrado com sucesso!`);
-
-// Enviar e-mail de encerramento
-sendEmail('template_encerramento',{
-to_name: t.technician,
-client_name: t.clientName,
-subject: t.subject,
-priority: t.priority,
-client_email: t.clientEmail
-});
-}
-}
-}
-
-// Modal Visualizar
-function openViewModal(id){
-const ticket=tickets.find(t=>t.id===id);
-document.getElementById("viewModalBody").innerHTML=`
-<p><strong>ID:</strong> ${ticket.id}</p>
-<p><strong>Assunto:</strong> ${ticket.subject}</p>
-<p><strong>Cliente:</strong> ${ticket.clientName} (${ticket.clientEmail})</p>
-<p><strong>Técnico:</strong> ${ticket.technician}</p>
-<p><strong>Prioridade:</strong> ${ticket.priority}</p>
-<p><strong>Status:</strong> ${ticket.status}</p>
-<p><strong>Data:</strong> ${ticket.date}</p>
-`;
-document.getElementById("viewModal").classList.remove("hidden");
-}
-function closeViewModal(){ document.getElementById("viewModal").classList.add("hidden"); }
-
-// Filtros
-document.getElementById("filterStatus").addEventListener("change", renderTickets);
-document.getElementById("filterPriority").addEventListener("change", renderTickets);
-document.getElementById("filterTechnician").addEventListener("change", renderTickets);
-
-// Export functions
-function exportExcel(){
-let ws=XLSX.utils.json_to_sheet(tickets.map(t=>({ID:t.id, Assunto:t.subject, Cliente:t.clientName, Tecnico:t.technician, Prioridade:t.priority, Status:t.status, Data:t.date})));
-let wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Chamados"); XLSX.writeFile(wb,"chamados.xlsx");
-}
-function exportPDF(){
-const { jsPDF } = window.jspdf;
-const doc=new jsPDF();
-doc.autoTable({ head:[["ID","Assunto","Cliente","Técnico","Prioridade","Status","Data"]],
-body: tickets.map(t=>[t.id,t.subject,t.clientName,t.technician,t.priority,t.status,t.date]) });
-doc.save("chamados.pdf");
-}
-
-renderTickets();
-</script>
+    function confirmCloseTicket(){
+      if(closeTicketId !== null){
+        const t = tickets.find(t => t.id === closeTicketId);
+        if(t){
+          t.status = "resolved";
+          renderTickets();
+          closeCloseModal();
+          alert(`Chamado #${t.id} encerrado com sucesso!`);
+        }
+      }
+    }
+  </script>
 </body>
 </html>
