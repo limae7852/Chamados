@@ -2,227 +2,187 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Sistema de Chamados - SharePoint + MSAL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Chamados</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
-  <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-4">📌 Sistema de Chamados</h1>
 
-  <!-- Navbar -->
-  <nav class="bg-gray-800 p-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold">Sistema de Chamados</h1>
-    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg">Login Microsoft</button>
-  </nav>
-
-  <!-- Ações -->
-  <div class="p-4 flex gap-2">
-    <button onclick="openModal()" class="bg-green-600 px-4 py-2 rounded-lg">Novo Chamado</button>
-    <button onclick="exportExcel()" class="bg-yellow-600 px-4 py-2 rounded-lg">Exportar Excel</button>
-    <button onclick="exportPDF()" class="bg-red-600 px-4 py-2 rounded-lg">Exportar PDF</button>
+  <!-- Botões principais -->
+  <div class="space-x-2 mb-4">
+    <button id="loginBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Entrar com Microsoft</button>
+    <button id="newTicketBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Novo Chamado</button>
+    <button id="exportExcelBtn" class="bg-yellow-500 text-white px-4 py-2 rounded-lg">Exportar Excel</button>
+    <button id="exportPdfBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Exportar PDF</button>
   </div>
 
-  <!-- Lista -->
-  <div class="p-4 overflow-x-auto">
-    <table class="w-full text-left border border-gray-700">
-      <thead class="bg-gray-700">
-        <tr>
-          <th class="p-2">ID</th>
-          <th class="p-2">Título</th>
-          <th class="p-2">Descrição</th>
-          <th class="p-2">Status</th>
-          <th class="p-2">Ações</th>
-        </tr>
-      </thead>
-      <tbody id="ticketsTable"></tbody>
-    </table>
-  </div>
+  <!-- Tabela de chamados -->
+  <table class="w-full bg-white shadow-md rounded-lg" id="ticketsTable">
+    <thead class="bg-gray-200">
+      <tr>
+        <th class="p-2">ID</th>
+        <th class="p-2">Título</th>
+        <th class="p-2">Descrição</th>
+        <th class="p-2">Status</th>
+        <th class="p-2">Ações</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <!-- Modal -->
-  <div id="ticketModal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center">
-    <div class="bg-gray-800 p-6 rounded-lg w-96">
-      <h2 id="modalTitle" class="text-xl mb-4">Novo Chamado</h2>
-      <form id="ticketForm" class="space-y-2">
-        <input type="hidden" id="ticketId">
-        <input type="text" id="title" placeholder="Título" class="w-full p-2 rounded bg-gray-700">
-        <textarea id="description" placeholder="Descrição" class="w-full p-2 rounded bg-gray-700"></textarea>
-        <select id="status" class="w-full p-2 rounded bg-gray-700">
-          <option value="open">Aberto</option>
-          <option value="in_progress">Em andamento</option>
-          <option value="resolved">Resolvido</option>
-        </select>
-        <div class="flex justify-end gap-2">
-          <button type="button" onclick="closeModal()" class="bg-gray-600 px-3 py-1 rounded">Cancelar</button>
-          <button type="submit" class="bg-blue-600 px-3 py-1 rounded">Salvar</button>
+  <!-- Modal de novo chamado -->
+  <div id="ticketModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-1/3">
+      <h2 class="text-xl font-bold mb-4">Novo Chamado</h2>
+      <form id="ticketForm">
+        <input type="text" id="titulo" placeholder="Título" class="w-full border p-2 rounded mb-2" required>
+        <textarea id="descricao" placeholder="Descrição" class="w-full border p-2 rounded mb-2" required></textarea>
+        <div class="flex justify-end space-x-2">
+          <button type="button" onclick="closeModal()" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+          <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Salvar</button>
         </div>
       </form>
     </div>
   </div>
 
-<script>
-/* ================================
-   CONFIGURAÇÕES
-================================ */
-const CLIENT_ID   = "SEU_CLIENT_ID";
-const TENANT_ID   = "SEU_TENANT_ID";
-const SITE_NAME   = "SEU_SITE"; // Ex: SuporteTI
-const LIST_NAME   = "Chamados"; // Nome da lista no SharePoint
-const SHAREPOINT_URL = `https://${TENANT_ID}.sharepoint.com/sites/${SITE_NAME}`;
+  <script>
+    // ================= CONFIGURAÇÕES =================
+    const CLIENT_ID = "SEU_CLIENT_ID";
+    const TENANT_ID = "SEU_TENANT_ID";
+    const SHAREPOINT_URL = "https://SEUSITE.sharepoint.com/sites/SUASITE";
+    const LIST_NAME = "Chamados";
 
-emailjs.init("SEU_EMAILJS_USER_ID");
+    // EmailJS
+    (function(){ emailjs.init("SEU_USER_ID_EMAILJS"); })();
 
-/* ================================
-   MSAL AUTH
-================================ */
-const msalConfig = {
-  auth: {
-    clientId: CLIENT_ID,
-    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
-    redirectUri: window.location.origin
-  },
-  cache: { cacheLocation: "localStorage" }
-};
-const msalInstance = new msal.PublicClientApplication(msalConfig);
-const loginRequest = { scopes: ["User.Read", "Sites.ReadWrite.All"] };
+    // ================= MSAL =================
+    const msalConfig = {
+      auth: {
+        clientId: CLIENT_ID,
+        authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+        redirectUri: window.location.origin
+      },
+      cache: { cacheLocation: "localStorage" }
+    };
 
-let accessToken = null;
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+    const loginRequest = { scopes: ["Sites.ReadWrite.All", "User.Read"] };
 
-document.getElementById("loginBtn").onclick = async () => {
-  const loginResponse = await msalInstance.loginPopup(loginRequest);
-  const tokenResponse = await msalInstance.acquireTokenSilent(loginRequest)
-    .catch(() => msalInstance.acquireTokenPopup(loginRequest));
-  accessToken = tokenResponse.accessToken;
-  alert("Login realizado com sucesso!");
-  loadTickets();
-};
+    let accessToken = null;
 
-/* ================================
-   SHAREPOINT CRUD
-================================ */
-async function callSharePoint(endpoint, method = "GET", body = null) {
-  if (!accessToken) throw new Error("Não autenticado.");
-  const headers = {
-    "Authorization": `Bearer ${accessToken}`,
-    "Accept": "application/json;odata=verbose",
-    "Content-Type": "application/json;odata=verbose"
-  };
-  const res = await fetch(`${SHAREPOINT_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/${endpoint}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined
-  });
-  return res.json();
-}
+    async function signIn() {
+      const loginResponse = await msalInstance.loginPopup(loginRequest);
+      const tokenResponse = await msalInstance.acquireTokenSilent(loginRequest)
+        .catch(() => msalInstance.acquireTokenPopup(loginRequest));
+      accessToken = tokenResponse.accessToken;
+      return accessToken;
+    }
 
-async function loadTickets() {
-  const data = await callSharePoint("items", "GET");
-  renderTickets(data.d.results);
-}
+    async function callSharePoint(endpoint, method = "GET", body = null) {
+      if (!accessToken) throw new Error("Usuário não autenticado");
+      const headers = {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json;odata=verbose",
+        "Content-Type": "application/json;odata=verbose"
+      };
+      const options = { method, headers };
+      if (body) options.body = JSON.stringify(body);
+      const url = `${SHAREPOINT_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/${endpoint}`;
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error("Erro SharePoint: " + res.status);
+      return res.json();
+    }
 
-async function saveTicketToSharePoint(ticket) {
-  return await callSharePoint("items", "POST", {
-    __metadata: { type: `SP.Data.${LIST_NAME}ListItem` },
-    Title: ticket.title,
-    Descricao: ticket.description,
-    Status: ticket.status
-  });
-}
+    // ================= CRUD Chamados =================
+    async function loadTickets() {
+      const data = await callSharePoint("items", "GET");
+      const tbody = document.querySelector("#ticketsTable tbody");
+      tbody.innerHTML = "";
+      data.d.results.forEach(t => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class='p-2'>${t.Id}</td>
+          <td class='p-2'>${t.Title}</td>
+          <td class='p-2'>${t.Descricao || "-"}</td>
+          <td class='p-2'>${t.Status || "Aberto"}</td>
+          <td class='p-2'>
+            <button onclick="encerrarChamado(${t.Id})" class='bg-red-500 text-white px-2 py-1 rounded'>Encerrar</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
 
-async function updateTicketInSharePoint(id, updates) {
-  return await callSharePoint(`items(${id})`, "MERGE", {
-    __metadata: { type: `SP.Data.${LIST_NAME}ListItem` },
-    ...updates
-  });
-}
+    async function saveTicket() {
+      const titulo = document.getElementById("titulo").value;
+      const descricao = document.getElementById("descricao").value;
 
-/* ================================
-   FRONTEND
-================================ */
-function renderTickets(tickets) {
-  const tbody = document.getElementById("ticketsTable");
-  tbody.innerHTML = "";
-  tickets.forEach(t => {
-    const row = `<tr class="border-b border-gray-700">
-      <td class="p-2">${t.Id}</td>
-      <td class="p-2">${t.Title}</td>
-      <td class="p-2">${t.Descricao || ""}</td>
-      <td class="p-2">${t.Status}</td>
-      <td class="p-2 flex gap-2">
-        <button class="bg-yellow-600 px-2 py-1 rounded" onclick="editTicket(${t.Id}, '${t.Title}', '${t.Descricao}', '${t.Status}')">Editar</button>
-        <button class="bg-red-600 px-2 py-1 rounded" onclick="closeTicket(${t.Id})">Encerrar</button>
-      </td>
-    </tr>`;
-    tbody.insertAdjacentHTML("beforeend", row);
-  });
-}
+      const body = {
+        __metadata: { type: "SP.Data.ChamadosListItem" },
+        Title: titulo,
+        Descricao: descricao,
+        Status: "Aberto"
+      };
 
-/* Modal */
-function openModal() { document.getElementById("ticketModal").classList.remove("hidden"); }
-function closeModal() { document.getElementById("ticketModal").classList.add("hidden"); }
+      await callSharePoint("items", "POST", body);
 
-function editTicket(id, title, desc, status) {
-  document.getElementById("ticketId").value = id;
-  document.getElementById("title").value = title;
-  document.getElementById("description").value = desc;
-  document.getElementById("status").value = status;
-  document.getElementById("modalTitle").textContent = "Editar Chamado";
-  openModal();
-}
+      emailjs.send("seu_service_id", "seu_template_id", { titulo, descricao });
 
-/* Salvar Chamado */
-document.getElementById("ticketForm").onsubmit = async (e) => {
-  e.preventDefault();
-  const id = document.getElementById("ticketId").value;
-  const ticket = {
-    title: document.getElementById("title").value,
-    description: document.getElementById("description").value,
-    status: document.getElementById("status").value
-  };
-  if (id) {
-    await updateTicketInSharePoint(id, ticket);
-    sendEmail("Chamado atualizado", ticket.title, ticket.description, ticket.status);
-  } else {
-    await saveTicketToSharePoint(ticket);
-    sendEmail("Novo chamado aberto", ticket.title, ticket.description, ticket.status);
-  }
-  closeModal();
-  loadTickets();
-};
+      loadTickets();
+    }
 
-/* Encerrar Chamado */
-async function closeTicket(id) {
-  await updateTicketInSharePoint(id, { Status: "resolved" });
-  sendEmail("Chamado encerrado", `Chamado ID ${id}`, "Encerrado", "resolved");
-  loadTickets();
-}
+    async function encerrarChamado(id) {
+      const body = {
+        __metadata: { type: "SP.Data.ChamadosListItem" },
+        Status: "Encerrado"
+      };
+      await callSharePoint(`items(${id})`, "MERGE", body);
+      alert("Chamado encerrado!");
+      loadTickets();
+    }
 
-/* ================================
-   EMAILJS
-================================ */
-function sendEmail(subject, title, description, status) {
-  emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", {
-    subject, title, description, status
-  }).then(() => console.log("E-mail enviado!"));
-}
+    // ================= Exportações =================
+    function exportToExcel() {
+      const table = document.getElementById("ticketsTable");
+      const wb = XLSX.utils.table_to_book(table);
+      XLSX.writeFile(wb, "chamados.xlsx");
+    }
 
-/* ================================
-   EXPORTAÇÃO
-================================ */
-function exportExcel() {
-  const table = document.getElementById("ticketsTable");
-  const wb = XLSX.utils.table_to_book(table, { sheet: "Chamados" });
-  XLSX.writeFile(wb, "chamados.xlsx");
-}
+    function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Relatório de Chamados", 10, 10);
+      doc.autoTable({ html: "#ticketsTable" });
+      doc.save("chamados.pdf");
+    }
 
-function exportPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.text("Relatório de Chamados", 10, 10);
-  doc.autoTable({ html: "#ticketsTable" });
-  doc.save("chamados.pdf");
-}
-</script>
+    // ================= Modal =================
+    function openModal() { document.getElementById("ticketModal").classList.remove("hidden"); }
+    function closeModal() { document.getElementById("ticketModal").classList.add("hidden"); }
+
+    // ================= Eventos =================
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      try {
+        await signIn();
+        alert("Login realizado com sucesso!");
+        loadTickets();
+      } catch (err) { alert("Erro no login: " + err.message); }
+    });
+
+    document.getElementById("newTicketBtn").addEventListener("click", openModal);
+
+    document.getElementById("ticketForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await saveTicket();
+      closeModal();
+    });
+
+    document.getElementById("exportExcelBtn").addEventListener("click", exportToExcel);
+    document.getElementById("exportPdfBtn").addEventListener("click", exportToPDF);
+  </script>
 </body>
 </html>
