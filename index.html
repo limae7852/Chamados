@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sistema de Chamados - SharePoint + EmailJS</title>
+  <title>Sistema de Chamados - Final</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
@@ -144,6 +144,7 @@
   </main>
 </div>
 
+<!-- Modal Abrir/Editar Chamado -->
 <div id="ticketModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-lg w-full max-w-2xl p-6">
     <div class="flex justify-between items-center mb-4">
@@ -195,10 +196,38 @@
   </div>
 </div>
 
+<!-- Modal Encerrar Chamado -->
+<div id="closeModalTicket" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg w-full max-w-md p-6">
+    <h2 class="text-xl font-semibold mb-4">Encerrar Chamado</h2>
+    <p class="mb-4">Deseja realmente encerrar este chamado? O status será alterado para <strong>Resolvido</strong> e será enviado um e-mail de confirmação.</p>
+    <div class="flex justify-end gap-2">
+      <button id="cancelCloseBtn" class="px-4 py-2 border rounded hover:bg-gray-100">Cancelar</button>
+      <button id="confirmCloseBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded">Encerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
-emailjs.init(''); // inicializado com a chave do usuário salva na aba Configurações
+// Inicialização EmailJS
+emailjs.init(''); // chave pública será definida nas configurações
 
 let tickets = [];
+let currentCloseTicketId = null;
+
+// Configuração EmailJS
+const saveConfigBtn = document.getElementById('saveConfigBtn');
+const configMsg = document.getElementById('configMsg');
+saveConfigBtn.addEventListener('click', () => {
+  localStorage.setItem('emailConfig', JSON.stringify({
+    serviceId: document.getElementById('cfgServiceId').value,
+    templateId: document.getElementById('cfgTemplateId').value,
+    publicKey: document.getElementById('cfgPublicKey').value,
+    internals: document.getElementById('cfgInternals').value.split(',')
+  }));
+  configMsg.classList.remove('hidden');
+  setTimeout(() => configMsg.classList.add('hidden'), 3000);
+});
 
 function getEmailConfig() {
   const cfg = JSON.parse(localStorage.getItem('emailConfig') || '{}');
@@ -226,24 +255,16 @@ function sendEmail(ticket, action) {
     .catch(err => console.error('Erro ao enviar email:', err));
 }
 
-const saveConfigBtn = document.getElementById('saveConfigBtn');
-const configMsg = document.getElementById('configMsg');
-saveConfigBtn.addEventListener('click', () => {
-  localStorage.setItem('emailConfig', JSON.stringify({
-    serviceId: document.getElementById('cfgServiceId').value,
-    templateId: document.getElementById('cfgTemplateId').value,
-    publicKey: document.getElementById('cfgPublicKey').value,
-    internals: document.getElementById('cfgInternals').value.split(',')
-  }));
-  configMsg.classList.remove('hidden');
-  setTimeout(() => configMsg.classList.add('hidden'), 3000);
-});
-
+// Abrir/fechar modais
 const ticketModal = document.getElementById('ticketModal');
 document.getElementById('openTicketModal').addEventListener('click', () => ticketModal.classList.remove('hidden'));
 document.getElementById('closeModal').addEventListener('click', () => ticketModal.classList.add('hidden'));
 document.getElementById('cancelTicketBtn').addEventListener('click', () => ticketModal.classList.add('hidden'));
 
+const closeModalTicket = document.getElementById('closeModalTicket');
+document.getElementById('cancelCloseBtn').addEventListener('click', () => closeModalTicket.classList.add('hidden'));
+
+// Formulário Abrir/Editar
 document.getElementById('ticketForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('ticketId').value || Date.now().toString();
@@ -271,6 +292,7 @@ document.getElementById('ticketForm').addEventListener('submit', (e) => {
   e.target.reset();
 });
 
+// Renderizar tickets
 function renderTickets() {
   const list = document.getElementById('ticketsList');
   list.innerHTML = '';
@@ -287,18 +309,15 @@ function renderTickets() {
       <td class="px-4 py-2">${ticket.date}</td>
       <td class="px-4 py-2 space-x-2">
         <button onclick="editTicket('${ticket.id}')" class="text-blue-600 hover:underline">Editar</button>
-        <button onclick="deleteTicket('${ticket.id}')" class="text-red-600 hover:underline">Excluir</button>
+        <button onclick="openCloseModal('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>
       </td>
     `;
     list.appendChild(tr);
   });
-
-  document.getElementById('statTotal').textContent = tickets.length;
-  document.getElementById('statOpen').textContent = tickets.filter(t => t.status === 'open').length;
-  document.getElementById('statInProgress').textContent = tickets.filter(t => t.status === 'in-progress').length;
-  document.getElementById('statResolved').textContent = tickets.filter(t => t.status === 'resolved').length;
+  updateStats();
 }
 
+// Editar chamado
 function editTicket(id) {
   const ticket = tickets.find(t => t.id === id);
   document.getElementById('ticketId').value = ticket.id;
@@ -311,19 +330,36 @@ function editTicket(id) {
   ticketModal.classList.remove('hidden');
 }
 
-function deleteTicket(id) {
-  const ticket = tickets.find(t => t.id === id);
-  tickets = tickets.filter(t => t.id !== id);
-  renderTickets();
-  sendEmail(ticket, 'excluído');
+// Abrir modal Encerrar
+function openCloseModal(id) {
+  currentCloseTicketId = id;
+  closeModalTicket.classList.remove('hidden');
 }
 
-// Export
+// Confirmar encerramento
+document.getElementById('confirmCloseBtn').addEventListener('click', () => {
+  const ticket = tickets.find(t => t.id === currentCloseTicketId);
+  if(ticket) {
+    ticket.status = 'resolved';
+    sendEmail(ticket, 'encerrado');
+    renderTickets();
+    closeModalTicket.classList.add('hidden');
+  }
+});
+
+// Estatísticas
+function updateStats() {
+  document.getElementById('statTotal').innerText = tickets.length;
+  document.getElementById('statOpen').innerText = tickets.filter(t => t.status === 'open').length;
+  document.getElementById('statInProgress').innerText = tickets.filter(t => t.status === 'in-progress').length;
+  document.getElementById('statResolved').innerText = tickets.filter(t => t.status === 'resolved').length;
+}
+
+// Exportação
 const exportMenu = document.getElementById('exportMenu');
 document.getElementById('generateReportBtn').addEventListener('click', () => {
   exportMenu.classList.toggle('hidden');
 });
-
 document.getElementById('exportExcel').addEventListener('click', () => exportExcel());
 document.getElementById('exportPDF').addEventListener('click', () => exportPDF());
 document.getElementById('exportCSV').addEventListener('click', () => exportCSV());
@@ -356,22 +392,16 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-// Tab switch
+// Abas
 const tabTicketsBtn = document.getElementById('tabTicketsBtn');
 const tabConfigBtn = document.getElementById('tabConfigBtn');
 const tabTickets = document.getElementById('tabTickets');
 const tabConfig = document.getElementById('tabConfig');
 
-tabTicketsBtn.addEventListener('click', () => {
-  tabTickets.classList.remove('hidden');
-  tabConfig.classList.add('hidden');
-});
-tabConfigBtn.addEventListener('click', () => {
-  tabConfig.classList.remove('hidden');
-  tabTickets.classList.add('hidden');
-});
+tabTicketsBtn.addEventListener('click', () => { tabTickets.classList.remove('hidden'); tabConfig.classList.add('hidden'); });
+tabConfigBtn.addEventListener('click', () => { tabConfig.classList.remove('hidden'); tabTickets.classList.add('hidden'); });
 
-// Filtros e pesquisa
+// Filtros
 document.getElementById('searchInput').addEventListener('input', filterTickets);
 document.getElementById('statusFilter').addEventListener('change', filterTickets);
 document.getElementById('priorityFilter').addEventListener('change', filterTickets);
@@ -403,13 +433,13 @@ function filterTickets() {
       <td class="px-4 py-2">${ticket.date}</td>
       <td class="px-4 py-2 space-x-2">
         <button onclick="editTicket('${ticket.id}')" class="text-blue-600 hover:underline">Editar</button>
-        <button onclick="deleteTicket('${ticket.id}')" class="text-red-600 hover:underline">Excluir</button>
+        <button onclick="openCloseModal('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>
       </td>
     `;
     list.appendChild(tr);
   });
+  updateStats();
 }
 </script>
-
 </body>
 </html>
