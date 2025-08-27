@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Chamados</title>
+<title>Sistema de Chamados Completo</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -22,6 +22,7 @@
 .priority-critical { border-left: 4px solid #7c3aed; }
 /* Modal colors */
 #closeModal .modal-content { background-color: #fef3c7; }
+#viewModal .modal-content { background-color: #e0f2fe; }
 </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -34,7 +35,28 @@
 </header>
 
 <main class="container mx-auto px-4 py-6">
-<div class="mb-4 flex gap-2">
+
+<!-- Formulário de abertura de chamado -->
+<div class="bg-white rounded shadow p-4 mb-6">
+<h2 class="text-lg font-semibold mb-4">Abrir Novo Chamado</h2>
+<form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<input type="text" id="subject" placeholder="Assunto" class="border rounded px-2 py-1" required>
+<input type="text" id="clientName" placeholder="Nome do Cliente" class="border rounded px-2 py-1" required>
+<input type="email" id="clientEmail" placeholder="E-mail do Cliente" class="border rounded px-2 py-1" required>
+<input type="text" id="technician" placeholder="Técnico Responsável" class="border rounded px-2 py-1" required>
+<select id="priority" class="border rounded px-2 py-1" required>
+<option value="">Selecione Prioridade</option>
+<option value="low">Baixa</option>
+<option value="medium">Média</option>
+<option value="high">Alta</option>
+<option value="critical">Crítica</option>
+</select>
+<button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded col-span-full">Abrir Chamado</button>
+</form>
+</div>
+
+<!-- Filtros e export -->
+<div class="mb-4 flex gap-2 flex-wrap">
 <select id="filterStatus" class="border rounded px-2 py-1">
 <option value="">Todos os Status</option>
 <option value="open">Aberto</option>
@@ -54,6 +76,7 @@
 <button onclick="exportPDF()" class="bg-blue-500 text-white px-3 py-1 rounded">Exportar PDF</button>
 </div>
 
+<!-- Lista de chamados -->
 <div class="bg-white rounded shadow overflow-x-auto">
 <table class="min-w-full divide-y divide-gray-200">
 <thead class="bg-gray-50">
@@ -85,20 +108,33 @@
 </div>
 </div>
 
-<script>
-let tickets = [
-{id:1, subject:"Erro Sistema", clientName:"Cliente A", clientEmail:"a@a.com", technician:"João", priority:"high", status:"open", date:"27/08/2025"},
-{id:2, subject:"Instalação Software", clientName:"Cliente B", clientEmail:"b@b.com", technician:"Maria", priority:"medium", status:"open", date:"26/08/2025"},
-{id:3, subject:"Manutenção PC", clientName:"Cliente C", clientEmail:"c@c.com", technician:"Pedro", priority:"low", status:"resolved", date:"25/08/2025"}
-];
+<!-- Modal Visualizar -->
+<div id="viewModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+<div class="modal-content rounded-lg w-full max-w-md p-6">
+<h3 class="text-lg font-semibold mb-4 text-blue-900">Detalhes do Chamado</h3>
+<div id="viewModalBody" class="text-gray-800 mb-4"></div>
+<div class="flex justify-end">
+<button onclick="closeViewModal()" class="bg-gray-300 px-4 py-2 rounded">Fechar</button>
+</div>
+</div>
+</div>
 
+<script>
+let tickets = [];
+let ticketCounter = 1;
 let closeTicketId = null;
 
-// Preenche filtro de técnicos
-let techSet = new Set(tickets.map(t=>t.technician));
+// Atualiza lista de técnicos do filtro
+function updateTechnicianFilter(){
+const techSet = new Set(tickets.map(t=>t.technician));
 let filterTechSelect = document.getElementById("filterTechnician");
-techSet.forEach(t=>{ let opt=document.createElement("option"); opt.value=t; opt.textContent=t; filterTechSelect.appendChild(opt); });
+filterTechSelect.innerHTML = '<option value="">Todos Técnicos</option>';
+techSet.forEach(t=>{
+let opt=document.createElement("option"); opt.value=t; opt.textContent=t; filterTechSelect.appendChild(opt);
+});
+}
 
+// Renderiza tabela de chamados
 function renderTickets(){
 const tbody = document.getElementById("ticketsList");
 tbody.innerHTML="";
@@ -122,15 +158,30 @@ tr.innerHTML=`
 <td class="px-4 py-3">${ticket.date}</td>
 <td class="px-4 py-3 space-x-1">
 ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:""}
-<button onclick="alert('Visualizar Chamado #${ticket.id}')" class="text-blue-600 hover:underline">Ver</button>
+<button onclick="openViewModal(${ticket.id})" class="text-blue-600 hover:underline">Ver</button>
 </td>
 `;
 tbody.appendChild(tr);
 }
 });
+updateTechnicianFilter();
 }
 
-// Modal functions
+// Formulário de abertura
+document.getElementById("ticketForm").addEventListener("submit", function(e){
+e.preventDefault();
+const subject = document.getElementById("subject").value;
+const clientName = document.getElementById("clientName").value;
+const clientEmail = document.getElementById("clientEmail").value;
+const technician = document.getElementById("technician").value;
+const priority = document.getElementById("priority").value;
+const date = new Date().toLocaleDateString('pt-BR');
+tickets.push({id: ticketCounter++, subject, clientName, clientEmail, technician, priority, status:"open", date});
+this.reset();
+renderTickets();
+});
+
+// Modal Encerrar
 function openCloseModal(id){
 closeTicketId=id;
 const ticket=tickets.find(t=>t.id===id);
@@ -149,6 +200,22 @@ alert(`Chamado #${t.id} encerrado com sucesso!`);
 }
 }
 }
+
+// Modal Visualizar
+function openViewModal(id){
+const ticket=tickets.find(t=>t.id===id);
+document.getElementById("viewModalBody").innerHTML=`
+<p><strong>ID:</strong> ${ticket.id}</p>
+<p><strong>Assunto:</strong> ${ticket.subject}</p>
+<p><strong>Cliente:</strong> ${ticket.clientName} (${ticket.clientEmail})</p>
+<p><strong>Técnico:</strong> ${ticket.technician}</p>
+<p><strong>Prioridade:</strong> ${ticket.priority}</p>
+<p><strong>Status:</strong> ${ticket.status}</p>
+<p><strong>Data:</strong> ${ticket.date}</p>
+`;
+document.getElementById("viewModal").classList.remove("hidden");
+}
+function closeViewModal(){ document.getElementById("viewModal").classList.add("hidden"); }
 
 // Filtros
 document.getElementById("filterStatus").addEventListener("change", renderTickets);
