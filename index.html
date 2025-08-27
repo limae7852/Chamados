@@ -1,831 +1,228 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sistema de Chamados - SharePoint + Export</title>
-
+  <meta charset="UTF-8">
+  <title>Sistema de Chamados - SharePoint + MSAL</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
-  <style>
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 6px; }
-    @keyframes highlight { 0% { box-shadow: none } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.12) } 100% { box-shadow: none } }
-    .highlight { animation: highlight 900ms ease; }
-    .priority-low { border-left: 4px solid #10b981; }
-    .priority-medium { border-left: 4px solid #f59e0b; }
-    .priority-high { border-left: 4px solid #ef4444; }
-    .priority-critical { border-left: 4px solid #7c3aed; }
-    /* small dropdown for export */
-    #exportMenu { min-width: 160px; }
-  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
 
-<div class="min-h-screen">
-  <header class="bg-orange-600 text-white shadow">
-    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-      <div>
-        <h1 class="text-xl font-bold">Sistema de Chamados</h1>
-        <p class="text-orange-100 text-sm">Gerencie seus atendimentos</p>
-      </div>
-      <nav class="space-x-2">
-        <button id="tabTicketsBtn" class="px-3 py-2 rounded bg-orange-500 hover:bg-orange-400"><i class="fas fa-ticket-alt mr-2"></i>Chamados</button>
-        <button id="tabConfigBtn" class="px-3 py-2 rounded bg-orange-500/70 hover:bg-orange-400/80"><i class="fas fa-cog mr-2"></i>Configurações</button>
-      </nav>
-    </div>
-  </header>
+  <!-- Navbar -->
+  <nav class="bg-gray-800 p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold">Sistema de Chamados</h1>
+    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg">Login Microsoft</button>
+  </nav>
 
-  <main class="container mx-auto px-4 py-6">
-    <section id="tabTickets" class="space-y-6">
-      <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
-        <div id="cardTotal" class="bg-white p-4 rounded shadow text-center">
-          <h4 class="text-sm text-gray-500">Total</h4>
-          <div id="statTotal" class="text-2xl font-bold">0</div>
-        </div>
-        <div id="cardOpen" class="bg-white p-4 rounded shadow text-center">
-          <h4 class="text-sm text-gray-500">Abertos</h4>
-          <div id="statOpen" class="text-2xl font-bold text-green-600">0</div>
-        </div>
-        <div id="cardInProgress" class="bg-white p-4 rounded shadow text-center">
-          <h4 class="text-sm text-gray-500">Em andamento</h4>
-          <div id="statInProgress" class="text-2xl font-bold text-yellow-600">0</div>
-        </div>
-        <div id="cardResolved" class="bg-white p-4 rounded shadow text-center">
-          <h4 class="text-sm text-gray-500">Resolvidos</h4>
-          <div id="statResolved" class="text-2xl font-bold text-blue-600">0</div>
-        </div>
-      </div>
-
-      <div class="bg-white p-4 rounded shadow flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          <div class="relative">
-            <input id="searchInput" type="text" placeholder="Buscar assuntos, cliente, técnico..." class="pl-10 pr-3 py-2 border rounded w-72 focus:outline-none" />
-            <i class="fas fa-search absolute left-3 top-2 text-gray-400"></i>
-          </div>
-
-          <select id="statusFilter" class="border rounded px-3 py-2">
-            <option value="">Todos os status</option>
-            <option value="open">Aberto</option>
-            <option value="in-progress">Em andamento</option>
-            <option value="resolved">Resolvido</option>
-          </select>
-
-          <select id="priorityFilter" class="border rounded px-3 py-2">
-            <option value="">Todas as prioridades</option>
-            <option value="low">Baixa</option>
-            <option value="medium">Média</option>
-            <option value="high">Alta</option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-2 relative">
-          <button id="generateReportBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"><i class="fas fa-file-export mr-2"></i>Gerar relatório</button>
-          <div id="exportMenu" class="hidden absolute right-0 mt-12 bg-white border rounded shadow p-2 z-50">
-            <button id="exportExcel" class="w-full text-left px-3 py-2 hover:bg-gray-100"><i class="fas fa-file-excel mr-2 text-green-600"></i>Exportar Excel</button>
-            <button id="exportPDF" class="w-full text-left px-3 py-2 hover:bg-gray-100"><i class="fas fa-file-pdf mr-2 text-red-600"></i>Exportar PDF</button>
-            <button id="exportCSV" class="w-full text-left px-3 py-2 hover:bg-gray-100"><i class="fas fa-file-csv mr-2 text-indigo-600"></i>Exportar CSV</button>
-          </div>
-
-          <button id="openTicketModal" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded"><i class="fas fa-plus mr-2"></i>Abrir Chamado</button>
-        </div>
-      </div>
-
-      <div class="bg-white rounded shadow overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assunto</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Técnico</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prioridade</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="ticketsList" class="bg-white divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section id="tabConfig" class="hidden space-y-6">
-      <div class="bg-white p-4 rounded shadow">
-        <h3 class="text-lg font-semibold mb-2">Configurações de E-mail (EmailJS)</h3>
-        <p class="text-sm text-gray-600 mb-4">Preencha os dados abaixo com os IDs/keys do seu EmailJS.</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label class="block">
-            <span class="text-sm text-gray-700">Service ID</span>
-            <input id="cfgServiceId" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="service_xxxxx"/>
-          </label>
-
-          <label class="block">
-            <span class="text-sm text-gray-700">Template ID</span>
-            <input id="cfgTemplateId" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="template_xxxxx"/>
-          </label>
-
-          <label class="block">
-            <span class="text-sm text-gray-700">Public Key</span>
-            <input id="cfgPublicKey" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="user_xxxxx"/>
-          </label>
-
-          <label class="block md:col-span-2">
-            <span class="text-sm text-gray-700">E-mails internos (separados por vírgula)</span>
-            <input id="cfgInternals" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="suporte@empresa.com, gerente@empresa.com"/>
-          </label>
-
-          <label class="block">
-            <span class="text-sm text-gray-700">Assunto padrão - abertura</span>
-            <input id="cfgSubjectOpen" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="Novo chamado aberto"/>
-          </label>
-
-          <label class="block">
-            <span class="text-sm text-gray-700">Assunto padrão - encerramento</span>
-            <input id="cfgSubjectClose" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="Chamado encerrado"/>
-          </label>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button id="saveConfigBtn" class="bg-green-600 text-white px-4 py-2 rounded">Salvar</button>
-          <button id="resetConfigBtn" class="bg-gray-300 px-4 py-2 rounded">Restaurar padrões</button>
-        </div>
-        <p id="configMsg" class="text-sm mt-2 text-green-600 hidden">Configurações salvas.</p>
-      </div>
-
-      <div class="bg-white p-4 rounded shadow">
-        <h3 class="text-lg font-semibold mb-2">Lista de Técnicos</h3>
-        <p class="text-sm text-gray-600 mb-2">Editar lista de técnicos (separados por vírgula). Utilizado no formulário de chamados.</p>
-        <textarea id="cfgTechnicians" class="w-full border rounded p-2" rows="2" placeholder="João Silva, Maria Oliveira, Ana Costa"></textarea>
-        <div class="mt-2">
-          <button id="saveTechBtn" class="bg-green-600 text-white px-4 py-2 rounded">Salvar Técnicos</button>
-          <span id="techMsg" class="text-sm text-green-600 ml-3 hidden">Técnicos salvos.</span>
-        </div>
-      </div>
-    </section>
-  </main>
-</div>
-
-<div id="ticketModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-lg w-full max-w-2xl p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h3 id="modalTitle" class="text-lg font-semibold">Abrir Chamado</h3>
-      <button id="closeTicketModal" class="text-gray-600 hover:text-gray-800"><i class="fas fa-times"></i></button>
-    </div>
-
-    <form id="ticketForm" class="space-y-3">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label class="block">
-          <span class="text-sm text-gray-600">Assunto *</span>
-          <input id="subject" required type="text" class="mt-1 block w-full border rounded px-3 py-2" />
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-gray-600">Prioridade *</span>
-          <select id="priority" required class="mt-1 block w-full border rounded px-3 py-2">
-            <option value="">Selecione</option>
-            <option value="low">Baixa</option>
-            <option value="medium">Média</option>
-            <option value="high">Alta</option>
-          </select>
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-gray-600">Técnico *</span>
-          <select id="technician" required class="mt-1 block w-full border rounded px-3 py-2"></select>
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-gray-600">Status</span>
-          <select id="status" class="mt-1 block w-full border rounded px-3 py-2">
-            <option value="open">Aberto</option>
-            <option value="in-progress">Em andamento</option>
-            <option value="resolved">Resolvido</option>
-          </select>
-        </label>
-
-        <label class="block md:col-span-2">
-          <span class="text-sm text-gray-600">Nome do Cliente *</span>
-          <input id="clientName" required type="text" class="mt-1 block w-full border rounded px-3 py-2" />
-        </label>
-
-        <label class="block md:col-span-2">
-          <span class="text-sm text-gray-600">E-mail do Cliente *</span>
-          <input id="clientEmail" required type="email" class="mt-1 block w-full border rounded px-3 py-2" />
-        </label>
-      </div>
-
-      <label class="block">
-        <span class="text-sm text-gray-600">Descrição *</span>
-        <textarea id="description" rows="4" required class="mt-1 block w-full border rounded px-3 py-2"></textarea>
-      </label>
-
-      <div class="flex justify-end gap-2">
-        <button type="button" id="cancelTicketBtn" class="bg-gray-300 px-4 py-2 rounded">Cancelar</button>
-        <button type="submit" id="saveTicketBtn" class="bg-orange-600 text-white px-4 py-2 rounded">Salvar</button>
-      </div>
-    </form>
+  <!-- Ações -->
+  <div class="p-4 flex gap-2">
+    <button onclick="openModal()" class="bg-green-600 px-4 py-2 rounded-lg">Novo Chamado</button>
+    <button onclick="exportExcel()" class="bg-yellow-600 px-4 py-2 rounded-lg">Exportar Excel</button>
+    <button onclick="exportPDF()" class="bg-red-600 px-4 py-2 rounded-lg">Exportar PDF</button>
   </div>
-</div>
+
+  <!-- Lista -->
+  <div class="p-4 overflow-x-auto">
+    <table class="w-full text-left border border-gray-700">
+      <thead class="bg-gray-700">
+        <tr>
+          <th class="p-2">ID</th>
+          <th class="p-2">Título</th>
+          <th class="p-2">Descrição</th>
+          <th class="p-2">Status</th>
+          <th class="p-2">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="ticketsTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Modal -->
+  <div id="ticketModal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center">
+    <div class="bg-gray-800 p-6 rounded-lg w-96">
+      <h2 id="modalTitle" class="text-xl mb-4">Novo Chamado</h2>
+      <form id="ticketForm" class="space-y-2">
+        <input type="hidden" id="ticketId">
+        <input type="text" id="title" placeholder="Título" class="w-full p-2 rounded bg-gray-700">
+        <textarea id="description" placeholder="Descrição" class="w-full p-2 rounded bg-gray-700"></textarea>
+        <select id="status" class="w-full p-2 rounded bg-gray-700">
+          <option value="open">Aberto</option>
+          <option value="in_progress">Em andamento</option>
+          <option value="resolved">Resolvido</option>
+        </select>
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="closeModal()" class="bg-gray-600 px-3 py-1 rounded">Cancelar</button>
+          <button type="submit" class="bg-blue-600 px-3 py-1 rounded">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
 <script>
-/* =========================
-    Persistence keys & defaults
-    ========================= */
-const STORAGE_KEY = "tickets_v1";
-const CFG_KEY = "tickets_cfg_v1";
+/* ================================
+   CONFIGURAÇÕES
+================================ */
+const CLIENT_ID   = "SEU_CLIENT_ID";
+const TENANT_ID   = "SEU_TENANT_ID";
+const SITE_NAME   = "SEU_SITE"; // Ex: SuporteTI
+const LIST_NAME   = "Chamados"; // Nome da lista no SharePoint
+const SHAREPOINT_URL = `https://${TENANT_ID}.sharepoint.com/sites/${SITE_NAME}`;
 
-// ** SHAREPOINT CONFIGURATION **
-const SHAREPOINT_SITE_URL = "https://arcelormittal-my.sharepoint.com/personal/97613371_amdistribuicao_com_br/Lists/Chamados";
-const SHAREPOINT_LIST_NAME = "Chamados";
+emailjs.init("SEU_EMAILJS_USER_ID");
 
-// Mapeie os nomes das colunas da sua lista do SharePoint para os campos do formulário.
-const SHAREPOINT_FIELDS_MAP = {
-  subject: "Assunto",
-  priority: "Prioridade",
-  technician: "Técnico",
-  status: "Status do Chamado",
-  clientName: "Nome do Usuario",
-  clientEmail: "E-mail do Usuário",
-  description: "Descricão do Problema"
+/* ================================
+   MSAL AUTH
+================================ */
+const msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri: window.location.origin
+  },
+  cache: { cacheLocation: "localStorage" }
 };
-// --- Funções de persistência adaptadas para SharePoint ---
-async function loadTickets() {
-  const url = `${SHAREPOINT_SITE_URL}/_api/web/lists/GetByTitle('${SHAREPOINT_LIST_NAME}')/items`;
-  try {
-    const response = await fetch(url, {
-      headers: { "Accept": "application/json;odata=nometadata" }
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data.value.map(item => ({
-      id: item.ID,
-      subject: item[SHAREPOINT_FIELDS_MAP.subject],
-      priority: item[SHAREPOINT_FIELDS_MAP.priority],
-      technician: item[SHAREPOINT_FIELDS_MAP.technician],
-      status: item[SHAREPOINT_FIELDS_MAP.status],
-      clientName: item[SHAREPOINT_FIELDS_MAP.clientName],
-      clientEmail: item[SHAREPOINT_FIELDS_MAP.clientEmail],
-      description: item[SHAREPOINT_FIELDS_MAP.description],
-      date: new Date(item.Created).toLocaleDateString()
-    }));
-  } catch (error) {
-    console.error("Falha ao carregar chamados do SharePoint:", error);
-    return [];
-  }
-}
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const loginRequest = { scopes: ["User.Read", "Sites.ReadWrite.All"] };
 
-async function saveTicketToSharePoint(ticketData) {
-  const url = `${SHAREPOINT_SITE_URL}/_api/web/lists/GetByTitle('${SHAREPOINT_LIST_NAME}')/items`;
-  // O Request Digest é essencial para segurança em requisições POST/PUT/DELETE
+let accessToken = null;
+
+document.getElementById("loginBtn").onclick = async () => {
+  const loginResponse = await msalInstance.loginPopup(loginRequest);
+  const tokenResponse = await msalInstance.acquireTokenSilent(loginRequest)
+    .catch(() => msalInstance.acquireTokenPopup(loginRequest));
+  accessToken = tokenResponse.accessToken;
+  alert("Login realizado com sucesso!");
+  loadTickets();
+};
+
+/* ================================
+   SHAREPOINT CRUD
+================================ */
+async function callSharePoint(endpoint, method = "GET", body = null) {
+  if (!accessToken) throw new Error("Não autenticado.");
   const headers = {
+    "Authorization": `Bearer ${accessToken}`,
     "Accept": "application/json;odata=verbose",
-    "Content-Type": "application/json;odata=verbose",
-    "X-RequestDigest": document.getElementById("__REQUESTDIGEST")?.value || "" 
+    "Content-Type": "application/json;odata=verbose"
   };
-  const body = {
-    "__metadata": { "type": `SP.Data.${SHAREPOINT_LIST_NAME.replace(/ /g, '_x0020_')}ListItem` },
-    [SHAREPOINT_FIELDS_MAP.subject]: ticketData.subject,
-    [SHAREPOINT_FIELDS_MAP.priority]: ticketData.priority,
-    [SHAREPOINT_FIELDS_MAP.technician]: ticketData.technician,
-    [SHAREPOINT_FIELDS_MAP.status]: ticketData.status,
-    [SHAREPOINT_FIELDS_MAP.clientName]: ticketData.clientName,
-    [SHAREPOINT_FIELDS_MAP.clientEmail]: ticketData.clientEmail,
-    [SHAREPOINT_FIELDS_MAP.description]: ticketData.description,
-  };
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(body)
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`SharePoint API Error: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Falha ao salvar no SharePoint:", error);
-    throw error;
-  }
-}
-
-// O código de persistência local foi removido para priorizar o SharePoint.
-function loadCfg() { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}");
-}
-function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
-
-let tickets = []; // Inicializado como array vazio e será populado por loadTickets()
-let cfg = Object.assign({
-  serviceId: "",
-  templateId: "",
-  publicKey: "",
-  internals: "",
-  subjectOpen: "Novo Chamado Aberto",
-  subjectClose: "Chamado Encerrado",
-  technicians: "João Silva, Maria Oliveira, Carlos Souza"
-}, loadCfg());
-let editingTicketId = null;
-let prevStats = { total: -1, open: -1, inProgress: -1, resolved: -1 };
-/* DOM refs */
-const tabs = { tickets: document.getElementById("tabTickets"), config: document.getElementById("tabConfig") };
-const btnTabTickets = document.getElementById("tabTicketsBtn");
-const btnTabConfig = document.getElementById("tabConfigBtn");
-const ticketsList = document.getElementById("ticketsList");
-const searchInput = document.getElementById("searchInput");
-const statusFilter = document.getElementById("statusFilter");
-const priorityFilter = document.getElementById("priorityFilter");
-
-const statTotal = document.getElementById("statTotal");
-const statOpen = document.getElementById("statOpen");
-const statInProgress = document.getElementById("statInProgress");
-const statResolved = document.getElementById("statResolved");
-const cardTotal = document.getElementById("cardTotal");
-const cardOpen = document.getElementById("cardOpen");
-const cardInProgress = document.getElementById("cardInProgress");
-const cardResolved = document.getElementById("cardResolved");
-
-const openTicketModalBtn = document.getElementById("openTicketModal");
-const ticketModal = document.getElementById("ticketModal");
-const closeTicketModal = document.getElementById("closeTicketModal");
-const ticketForm = document.getElementById("ticketForm");
-const modalTitle = document.getElementById("modalTitle");
-const saveTicketBtn = document.getElementById("saveTicketBtn");
-const cancelTicketBtn = document.getElementById("cancelTicketBtn");
-
-const cfgServiceId = document.getElementById("cfgServiceId");
-const cfgTemplateId = document.getElementById("cfgTemplateId");
-const cfgPublicKey = document.getElementById("cfgPublicKey");
-const cfgInternals = document.getElementById("cfgInternals");
-const cfgSubjectOpen = document.getElementById("cfgSubjectOpen");
-const cfgSubjectClose = document.getElementById("cfgSubjectClose");
-const cfgTechnicians = document.getElementById("cfgTechnicians");
-const saveConfigBtn = document.getElementById("saveConfigBtn");
-const resetConfigBtn = document.getElementById("resetConfigBtn");
-const configMsg = document.getElementById("configMsg");
-const saveTechBtn = document.getElementById("saveTechBtn");
-const techMsg = document.getElementById("techMsg");
-
-const exportMenu = document.getElementById("exportMenu");
-const generateReportBtn = document.getElementById("generateReportBtn");
-const exportExcelBtn = document.getElementById("exportExcel");
-const exportPDFBtn = document.getElementById("exportPDF");
-const exportCSVBtn = document.getElementById("exportCSV");
-
-/* =========================
-    Email helpers (EmailJS)
-    ========================= */
-function ensureEmailInit() {
-  if (cfg.publicKey) {
-    try { emailjs.init(cfg.publicKey);
-} catch(e){ /* ignore */ }
-  }
-}
-
-function sendEmailRaw({ to, subject, body }) {
-  if (!cfg.serviceId || !cfg.templateId || !cfg.publicKey) {
-    console.warn("E-mail não enviado: dados EmailJS não configurados.");
-return Promise.resolve("not-configured");
-  }
-  ensureEmailInit();
-
-  const templateParams = {
-    to_email: to,
-    subject: subject,
-    message: body,
-    site: window.location.origin
-  };
-return emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
-}
-
-function notifyInternals(subject, body) {
-  if (!cfg.internals) return Promise.resolve("no-internals");
-  const list = cfg.internals.split(",").map(s => s.trim()).filter(Boolean);
-const promises = list.map(to => sendEmailRaw({ to, subject, body }).catch(e => e));
-  return Promise.allSettled(promises);
-}
-
-function notifyClient(clientEmail, subject, body) {
-  if (!clientEmail) return Promise.resolve("no-client");
-  return sendEmailRaw({ to: clientEmail, subject, body }).catch(e => e);
-}
-
-/* =========================
-    Tab navigation
-    ========================= */
-function showTab(name) {
-  if (name === "tickets") { tabs.tickets.classList.remove("hidden");
-tabs.config.classList.add("hidden"); }
-  else { tabs.tickets.classList.add("hidden"); tabs.config.classList.remove("hidden"); }
-}
-btnTabTickets.addEventListener("click", () => showTab("tickets"));
-btnTabConfig.addEventListener("click", () => showTab("config"));
-/* =========================
-    Config UI
-    ========================= */
-function loadCfgToUI() {
-  cfgServiceId.value = cfg.serviceId || "";
-cfgTemplateId.value = cfg.templateId || "";
-  cfgPublicKey.value = cfg.publicKey || "";
-  cfgInternals.value = cfg.internals || "";
-  cfgSubjectOpen.value = cfg.subjectOpen || "";
-cfgSubjectClose.value = cfg.subjectClose || "";
-  cfgTechnicians.value = cfg.technicians || "";
-}
-loadCfgToUI();
-saveConfigBtn.addEventListener("click", () => {
-  cfg.serviceId = cfgServiceId.value.trim();
-  cfg.templateId = cfgTemplateId.value.trim();
-  cfg.publicKey = cfgPublicKey.value.trim();
-  cfg.internals = cfgInternals.value.trim();
-  cfg.subjectOpen = cfgSubjectOpen.value.trim() || cfg.subjectOpen;
-  cfg.subjectClose = cfgSubjectClose.value.trim() || cfg.subjectClose;
-  cfg.technicians = cfgTechnicians.value.trim();
-  saveCfg(cfg);
-  configMsg.classList.remove("hidden");
-  setTimeout(()=>configMsg.classList.add("hidden"), 2200);
-  populateTechniciansSelect();
-  ensureEmailInit();
-});
-resetConfigBtn.addEventListener("click", () => {
-  cfg = {
-    serviceId: "",
-    templateId: "",
-    publicKey: "",
-    internals: "",
-    subjectOpen: "Novo Chamado Aberto",
-    subjectClose: "Chamado Encerrado",
-    technicians: "João Silva, Maria Oliveira, Carlos Souza"
-  };
-  saveCfg(cfg);
-  loadCfgToUI();
-  populateTechniciansSelect();
-  configMsg.classList.remove("hidden");
-  setTimeout(()=>configMsg.classList.add("hidden"), 2200);
-});
-saveTechBtn.addEventListener("click", () => {
-  cfg.technicians = cfgTechnicians.value.trim();
-  saveCfg(cfg);
-  techMsg.classList.remove("hidden");
-  setTimeout(()=>techMsg.classList.add("hidden"), 2000);
-  populateTechniciansSelect();
-});
-/* =========================
-    Technicians select
-    ========================= */
-function getTechnicians() {
-  const raw = cfg.technicians || "";
-  return raw.split(",").map(s => s.trim()).filter(Boolean);
-}
-function populateTechniciansSelect() {
-  const sel = document.getElementById("technician");
-  sel.innerHTML = "<option value=''>Selecione</option>";
-getTechnicians().forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    sel.appendChild(opt);
+  const res = await fetch(`${SHAREPOINT_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/${endpoint}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
   });
-}
-populateTechniciansSelect();
-
-/* =========================
-    Stats utils
-    ========================= */
-function animateCard(card) {
-  card.classList.remove("highlight");
-  void card.offsetWidth;
-  card.classList.add("highlight");
-}
-function updateStats() {
-  const total = tickets.length;
-  const open = tickets.filter(t => t.status === "open").length;
-const inProgress = tickets.filter(t => t.status === "in-progress").length;
-  const resolved = tickets.filter(t => t.status === "resolved").length;
-if (total !== prevStats.total) animateCard(cardTotal);
-  if (open !== prevStats.open) animateCard(cardOpen);
-  if (inProgress !== prevStats.inProgress) animateCard(cardInProgress);
-  if (resolved !== prevStats.resolved) animateCard(cardResolved);
-statTotal.textContent = total;
-  statOpen.textContent = open;
-  statInProgress.textContent = inProgress;
-  statResolved.textContent = resolved;
-
-  prevStats = { total, open, inProgress, resolved };
+  return res.json();
 }
 
-/* =========================
-    Render tickets list
-    ========================= */
-function escapeHtml(str) {
-  if (!str) return "";
-return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'", "&#39;");
+async function loadTickets() {
+  const data = await callSharePoint("items", "GET");
+  renderTickets(data.d.results);
 }
 
-function getFilteredTickets() {
-  const searchTerm = (searchInput.value || "").toLowerCase();
-  const statusTerm = statusFilter.value;
-  const priorityTerm = priorityFilter.value;
-
-  return tickets.filter(ticket => {
-    const matchSearch =
-      ticket.subject.toLowerCase().includes(searchTerm) ||
-      ticket.clientName.toLowerCase().includes(searchTerm) ||
-      (ticket.clientEmail || "").toLowerCase().includes(searchTerm) ||
-      (ticket.technician || "").toLowerCase().includes(searchTerm) ||
-      (ticket.description || "").toLowerCase().includes(searchTerm);
-    const matchStatus = statusTerm ? ticket.status === statusTerm : true;
-    const matchPriority = priorityTerm ? ticket.priority === priorityTerm : true;
-    return matchSearch && matchStatus && matchPriority;
+async function saveTicketToSharePoint(ticket) {
+  return await callSharePoint("items", "POST", {
+    __metadata: { type: `SP.Data.${LIST_NAME}ListItem` },
+    Title: ticket.title,
+    Descricao: ticket.description,
+    Status: ticket.status
   });
 }
 
-function displayTickets() {
-  const filtered = getFilteredTickets();
-ticketsList.innerHTML = "";
+async function updateTicketInSharePoint(id, updates) {
+  return await callSharePoint(`items(${id})`, "MERGE", {
+    __metadata: { type: `SP.Data.${LIST_NAME}ListItem` },
+    ...updates
+  });
+}
 
-  if (!filtered.length) {
-    ticketsList.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Nenhum chamado encontrado.</td></tr>`;
-    updateStats();
-return;
-  }
-
-  filtered.forEach(ticket => {
-    const tr = document.createElement("tr");
-    tr.className = ticket.priority ? `priority-${ticket.priority}` : "";
-    tr.innerHTML = `
-      <td class="px-4 py-3">${ticket.id}</td>
-      <td class="px-4 py-3 font-medium">${escapeHtml(ticket.subject)}</td>
-      <td class="px-4 py-3">${escapeHtml(ticket.clientName)}<div class="text-xs text-gray-400">${escapeHtml(ticket.clientEmail)}</div></td>
-      <td class="px-4 py-3">${escapeHtml(ticket.technician)}</td>
-      <td class="px-4 py-3 capitalize">${ticket.priority}</td>
-      <td class="px-4 py-3 capitalize">${ticket.status.replace("-", " ")}</td>
-      <td class="px-4 py-3">${ticket.date}</td>
-      <td class="px-4 py-3 space-x-1">
-        ${ticket.status !== "resolved" ? `<button class="closeBtn bg-green-600 text-white px-2 py-1 rounded text-xs"><i class="fas fa-check mr-1"></i>Encerrar</button>` : ""}
-        <button class="viewBtn bg-blue-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-eye mr-1"></i>Ver</button>
-        ${ticket.status !== "resolved" ? `<button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>` : ""}
+/* ================================
+   FRONTEND
+================================ */
+function renderTickets(tickets) {
+  const tbody = document.getElementById("ticketsTable");
+  tbody.innerHTML = "";
+  tickets.forEach(t => {
+    const row = `<tr class="border-b border-gray-700">
+      <td class="p-2">${t.Id}</td>
+      <td class="p-2">${t.Title}</td>
+      <td class="p-2">${t.Descricao || ""}</td>
+      <td class="p-2">${t.Status}</td>
+      <td class="p-2 flex gap-2">
+        <button class="bg-yellow-600 px-2 py-1 rounded" onclick="editTicket(${t.Id}, '${t.Title}', '${t.Descricao}', '${t.Status}')">Editar</button>
+        <button class="bg-red-600 px-2 py-1 rounded" onclick="closeTicket(${t.Id})">Encerrar</button>
       </td>
-    `;
-if (ticket.status !== "resolved") {
-      tr.querySelector(".closeBtn").addEventListener("click", async () => {
-        // Lógica para encerrar no SharePoint
-        alert(`Chamado ID ${ticket.id} encerrado.`);
-      });
-}
-
-    tr.querySelector(".viewBtn").addEventListener("click", () => {
-      openModalForTicket(ticket, { viewOnly: true });
-    });
-if (tr.querySelector(".editBtn")) {
-      tr.querySelector(".editBtn").addEventListener("click", () => {
-        editingTicketId = ticket.id;
-        openModalForTicket(ticket, { viewOnly: false });
-      });
-}
-
-    ticketsList.appendChild(tr);
+    </tr>`;
+    tbody.insertAdjacentHTML("beforeend", row);
   });
-
-  updateStats();
 }
 
-/* =========================
-    Modal handling: create/edit/view
-    ========================= */
-function openModalForTicket(ticket = null, { viewOnly = false } = {}) {
-  const subjectEl = document.getElementById("subject");
-const priorityEl = document.getElementById("priority");
-  const technicianEl = document.getElementById("technician");
-  const statusEl = document.getElementById("status");
-  const clientNameEl = document.getElementById("clientName");
-  const clientEmailEl = document.getElementById("clientEmail");
-const descriptionEl = document.getElementById("description");
+/* Modal */
+function openModal() { document.getElementById("ticketModal").classList.remove("hidden"); }
+function closeModal() { document.getElementById("ticketModal").classList.add("hidden"); }
 
-  if (ticket) {
-    modalTitle.textContent = viewOnly ? `Visualizar Chamado #${ticket.id}` : `Editar Chamado #${ticket.id}`;
-    subjectEl.value = ticket.subject;
-    priorityEl.value = ticket.priority;
-    technicianEl.value = ticket.technician;
-    statusEl.value = ticket.status;
-clientNameEl.value = ticket.clientName;
-    clientEmailEl.value = ticket.clientEmail;
-    descriptionEl.value = ticket.description;
-  } else {
-    modalTitle.textContent = "Abrir Chamado";
-subjectEl.value = "";
-    priorityEl.value = "";
-    technicianEl.value = "";
-    statusEl.value = "open";
-    clientNameEl.value = "";
-    clientEmailEl.value = "";
-descriptionEl.value = "";
-  }
-
-  if (viewOnly) {
-    Array.from(ticketForm.elements).forEach(el => el.disabled = true);
-    saveTicketBtn.classList.add("hidden");
-} else {
-    Array.from(ticketForm.elements).forEach(el => el.disabled = false);
-    saveTicketBtn.classList.remove("hidden");
-  }
-
-  ticketModal.classList.remove("hidden");
+function editTicket(id, title, desc, status) {
+  document.getElementById("ticketId").value = id;
+  document.getElementById("title").value = title;
+  document.getElementById("description").value = desc;
+  document.getElementById("status").value = status;
+  document.getElementById("modalTitle").textContent = "Editar Chamado";
+  openModal();
 }
 
-openTicketModalBtn.addEventListener("click", () => { editingTicketId = null; openModalForTicket(null, { viewOnly:false }); populateTechniciansSelect(); });
-closeTicketModal.addEventListener("click", () => ticketModal.classList.add("hidden"));
-cancelTicketBtn.addEventListener("click", () => ticketModal.classList.add("hidden"));
-
-/* =========================
-    submit (create / edit)
-    ========================= */
-ticketForm.addEventListener("submit", async (e) => {
+/* Salvar Chamado */
+document.getElementById("ticketForm").onsubmit = async (e) => {
   e.preventDefault();
-  const subject = document.getElementById("subject").value.trim();
-  const priority = document.getElementById("priority").value;
-  const technician = document.getElementById("technician").value;
-  const status = document.getElementById("status").value;
-  const clientName = document.getElementById("clientName").value.trim();
-  const clientEmail = document.getElementById("clientEmail").value.trim();
-  const description = document.getElementById("description").value.trim();
-
-  if (!subject || !clientName || !clientEmail) {
-    alert("Preencha Assunto, Nome e E-mail do cliente.");
-    return;
-  }
-
-  if (editingTicketId) {
-    // edição
-    const t = tickets.find(x => x.id === editingTicketId);
-    if (!t) { alert("Chamado não encontrado."); ticketModal.classList.add("hidden"); return; }
-
-    t.subject = subject;
-t.priority = priority;
-    t.technician = technician;
-    t.status = status;
-    t.clientName = clientName;
-    t.clientEmail = clientEmail;
-    t.description = description;
-// Lógica para salvar a edição no SharePoint aqui
-    
-    notifyInternals(`Chamado Editado - ID ${t.id}`, `O chamado ID ${t.id} foi editado.\nAssunto: ${t.subject}\nCliente: ${t.clientName}\nPrioridade: ${t.priority}`)
-      .then(()=>{})
-      .catch(()=>{});
-alert("Chamado atualizado.");
+  const id = document.getElementById("ticketId").value;
+  const ticket = {
+    title: document.getElementById("title").value,
+    description: document.getElementById("description").value,
+    status: document.getElementById("status").value
+  };
+  if (id) {
+    await updateTicketInSharePoint(id, ticket);
+    sendEmail("Chamado atualizado", ticket.title, ticket.description, ticket.status);
   } else {
-    // criação
-    const newTicket = {
-      subject,
-      priority,
-      technician,
-      status,
-      clientName,
-      clientEmail,
-      description,
-      date: new Date().toLocaleDateString()
-    };
-try {
-      const spItem = await saveTicketToSharePoint(newTicket);
-      newTicket.id = spItem.d.ID;
-      tickets.push(newTicket);
-// notificar internals + confirmar para cliente (ambos best-effort)
-      notifyInternals(cfg.subjectOpen || "Novo Chamado Aberto", `Novo chamado ID ${newTicket.id}\nAssunto: ${newTicket.subject}\nCliente: ${newTicket.clientName}\nPrioridade: ${newTicket.priority}`).catch(()=>{});
-notifyClient(newTicket.clientEmail, cfg.subjectOpen || "Seu chamado foi recebido", `Olá ${newTicket.clientName},\n\nRecebemos seu chamado (ID ${newTicket.id}).\nAssunto: ${newTicket.subject}\nTécnico: ${newTicket.technician}\n\nResponderemos em breve.`).catch(()=>{});
-alert("Chamado criado com sucesso e salvo no SharePoint.");
-    } catch(error) {
-      alert("Falha ao criar o chamado. Verifique a configuração do SharePoint.");
-}
+    await saveTicketToSharePoint(ticket);
+    sendEmail("Novo chamado aberto", ticket.title, ticket.description, ticket.status);
   }
+  closeModal();
+  loadTickets();
+};
 
-  ticketModal.classList.add("hidden");
-  editingTicketId = null;
-  displayTickets();
-});
-/* =========================
-    Filters & search
-    ========================= */
-searchInput.addEventListener("input", displayTickets);
-statusFilter.addEventListener("change", displayTickets);
-priorityFilter.addEventListener("change", displayTickets);
-/* =========================
-    Generate report (exports)
-    ========================= */
-generateReportBtn.addEventListener("click", (e) => {
-  exportMenu.classList.toggle("hidden");
-});
-// click outside to close export menu
-document.addEventListener("click", (ev) => {
-  if (!generateReportBtn.contains(ev.target) && !exportMenu.contains(ev.target)) {
-    exportMenu.classList.add("hidden");
-  }
-});
-function getVisibleRowsForExport() {
-  // Return array of objects with the table columns
-  const filtered = getFilteredTickets();
-return filtered.map(t => ({
-    ID: t.id,
-    Assunto: t.subject,
-    Cliente: `${t.clientName} (${t.clientEmail || ""})`,
-    Tecnico: t.technician || "",
-    Prioridade: t.priority,
-    Status: t.status.replace("-", " "),
-    Data: t.date
-  }));
+/* Encerrar Chamado */
+async function closeTicket(id) {
+  await updateTicketInSharePoint(id, { Status: "resolved" });
+  sendEmail("Chamado encerrado", `Chamado ID ${id}`, "Encerrado", "resolved");
+  loadTickets();
 }
 
-function timestampFileName(ext) {
-  const now = new Date();
-  const pad = n => String(n).padStart(2, "0");
-  const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-  return `relatorio_chamados_${date}_${time}.${ext}`;
+/* ================================
+   EMAILJS
+================================ */
+function sendEmail(subject, title, description, status) {
+  emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", {
+    subject, title, description, status
+  }).then(() => console.log("E-mail enviado!"));
 }
 
-exportExcelBtn.addEventListener("click", () => {
-  const rows = getVisibleRowsForExport();
-  if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
+/* ================================
+   EXPORTAÇÃO
+================================ */
+function exportExcel() {
+  const table = document.getElementById("ticketsTable");
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Chamados" });
+  XLSX.writeFile(wb, "chamados.xlsx");
+}
 
-  // Convert to worksheet
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Chamados");
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([wbout], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = timestampFileName("xlsx");
-  a.click();
-  URL.revokeObjectURL(url);
-  exportMenu.classList.add("hidden");
-});
-exportCSVBtn.addEventListener("click", () => {
-  const rows = getVisibleRowsForExport();
-  if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
-  const header = Object.keys(rows[0]).join(",") + "\n";
-  const lines = rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-  const csv = header + lines;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = timestampFileName("csv");
-  a.click();
-  URL.revokeObjectURL(url);
-  exportMenu.classList.add("hidden");
-});
-
-exportPDFBtn.addEventListener("click", () => {
-  const rows = getVisibleRowsForExport();
-  if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
-
-  // Build columns 
-  const columns = Object.keys(rows[0]);
-  const data = rows.map(r => columns.map(c => String(r[c])));
-// Using jspdf from UMD (window.jspdf)
+function exportPDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('landscape', 'pt', 'a4');
-doc.setFontSize(14);
-  doc.text("Relatório de Chamados", 40, 40);
-  doc.setFontSize(10);
-  doc.text(`Gerado em: ${new Date().toLocaleString()}`, 40, 58);
-doc.autoTable({
-    head: [columns],
-    body: data,
-    startY: 80,
-    styles: { fontSize: 9, cellPadding: 4 },
-    headStyles: { fillColor: [33, 150, 243] }
-  });
-doc.save(timestampFileName("pdf"));
-  exportMenu.classList.add("hidden");
-});
-
-/* =========================
-    Bootstrap: display, load cfg into UI
-    ========================= */
-async function init() {
-  loadCfgToUI();
-populateTechniciansSelect();
-  tickets = await loadTickets(); // Carregar do SharePoint no início
-  displayTickets();
-  updateStats();
-  ensureEmailInit();
+  const doc = new jsPDF();
+  doc.text("Relatório de Chamados", 10, 10);
+  doc.autoTable({ html: "#ticketsTable" });
+  doc.save("chamados.pdf");
 }
-init();
-
 </script>
-
 </body>
 </html>
