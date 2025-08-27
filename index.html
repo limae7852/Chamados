@@ -6,60 +6,57 @@
   <title>Sistema de Chamados</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Estilos de destaque */
     @keyframes blinkHighlight {
       0% { background-color: #fce7f3; }
       50% { background-color: #f9a8d4; }
       100% { background-color: #fce7f3; }
     }
-    .blink {
-      animation: blinkHighlight 1s ease-in-out 3;
-    }
-    .highlight {
-      background-color: #bbf7d0 !important;
-      transition: background-color 1s ease;
-    }
+    .blink { animation: blinkHighlight 1s ease-in-out 3; }
+    .highlight { background-color: #dcfce7 !important; }
+    .priority-low { background-color: #ecfdf5; }
+    .priority-medium { background-color: #fef9c3; }
+    .priority-high { background-color: #fee2e2; }
+    .priority-critical { background-color: #fce7f3; font-weight: bold; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
+<body class="bg-gray-100 text-gray-900">
 
-  <div class="max-w-6xl mx-auto">
+  <div class="container mx-auto p-6">
     <h1 class="text-2xl font-bold mb-6">📌 Sistema de Chamados</h1>
 
-    <!-- Formulário de abertura -->
-    <div class="bg-white p-6 rounded-2xl shadow mb-6">
-      <h2 class="text-xl font-semibold mb-4">Abrir Chamado</h2>
+    <!-- Formulário -->
+    <div class="bg-white p-6 rounded shadow mb-6">
+      <h2 class="text-xl font-semibold mb-4">Abrir Novo Chamado</h2>
       <form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input id="subject" type="text" placeholder="Assunto" class="border rounded-lg p-2" required>
-        <input id="client" type="text" placeholder="Cliente" class="border rounded-lg p-2" required>
-        <input id="tech" type="text" placeholder="Técnico Responsável" class="border rounded-lg p-2" required>
-        <select id="priority" class="border rounded-lg p-2" required>
+        <input type="text" id="subject" placeholder="Assunto" class="border p-2 rounded" required>
+        <input type="text" id="client" placeholder="Cliente" class="border p-2 rounded" required>
+        <input type="text" id="tech" placeholder="Técnico Responsável" class="border p-2 rounded" required>
+        <select id="priority" class="border p-2 rounded" required>
           <option value="">Selecione a Prioridade</option>
           <option value="low">Baixa</option>
           <option value="medium">Média</option>
           <option value="high">Alta</option>
           <option value="critical">Crítica</option>
         </select>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 col-span-1 md:col-span-2">
-          Abrir Chamado
-        </button>
+        <!-- Campo de descrição -->
+        <textarea id="description" placeholder="Descreva o problema..." class="border p-2 rounded col-span-1 md:col-span-2" required></textarea>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded col-span-1 md:col-span-2">Abrir Chamado</button>
       </form>
     </div>
 
-    <!-- Tabela de chamados -->
-    <div class="bg-white p-6 rounded-2xl shadow">
+    <!-- Lista -->
+    <div class="bg-white p-6 rounded shadow">
       <h2 class="text-xl font-semibold mb-4">Chamados Abertos</h2>
       <table class="w-full border-collapse">
         <thead>
           <tr class="bg-gray-200">
-            <th class="px-4 py-2">ID</th>
-            <th class="px-4 py-2">Assunto</th>
-            <th class="px-4 py-2">Cliente</th>
-            <th class="px-4 py-2">Técnico</th>
-            <th class="px-4 py-2">Prioridade</th>
-            <th class="px-4 py-2">Status</th>
-            <th class="px-4 py-2">Data</th>
-            <th class="px-4 py-2">Ações</th>
+            <th class="px-4 py-2 border">ID</th>
+            <th class="px-4 py-2 border">Assunto</th>
+            <th class="px-4 py-2 border">Cliente</th>
+            <th class="px-4 py-2 border">Técnico</th>
+            <th class="px-4 py-2 border">Prioridade</th>
+            <th class="px-4 py-2 border">Status</th>
+            <th class="px-4 py-2 border">Ações</th>
           </tr>
         </thead>
         <tbody id="ticketsList"></tbody>
@@ -67,133 +64,100 @@
     </div>
   </div>
 
-  <!-- Modal de edição -->
-  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-    <div class="bg-white rounded-2xl p-6 w-96">
-      <h2 class="text-xl font-semibold mb-4">Editar Chamado</h2>
-      <form id="editForm" class="space-y-3">
-        <input id="editSubject" type="text" class="border rounded-lg p-2 w-full">
-        <input id="editClient" type="text" class="border rounded-lg p-2 w-full">
-        <input id="editTech" type="text" class="border rounded-lg p-2 w-full">
-        <select id="editPriority" class="border rounded-lg p-2 w-full">
-          <option value="low">Baixa</option>
-          <option value="medium">Média</option>
-          <option value="high">Alta</option>
-          <option value="critical">Crítica</option>
-        </select>
-        <div class="flex justify-end space-x-2">
-          <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Salvar</button>
-        </div>
-      </form>
+  <!-- Modal de Encerramento -->
+  <div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+      <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
+      <p id="closeMessage" class="mb-4 text-gray-700">Tem certeza que deseja encerrar este chamado?</p>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeCloseModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+        <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded bg-green-600 text-white">Confirmar</button>
+      </div>
     </div>
   </div>
 
-  <!-- Modal de encerramento -->
-  <div id="closeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-    <div class="bg-pink-100 border border-pink-300 rounded-2xl p-6 w-96">
-      <h2 class="text-xl font-semibold mb-4 text-pink-700">Encerrar Chamado</h2>
-      <p class="mb-4 text-pink-800">Tem certeza que deseja encerrar este chamado?</p>
-      <div class="flex justify-end space-x-2">
-        <button onclick="closeCloseModal()" class="px-4 py-2 rounded-lg border">Cancelar</button>
-        <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded-lg bg-pink-600 text-white">Encerrar</button>
+  <!-- Modal de Detalhes -->
+  <div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+      <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
+      <div id="detailsContent" class="space-y-2 text-gray-800"></div>
+      <div class="flex justify-end mt-4">
+        <button onclick="closeDetailsModal()" class="px-4 py-2 rounded bg-blue-600 text-white">Fechar</button>
       </div>
     </div>
   </div>
 
   <script>
     let tickets = [];
-    let editTicketId = null;
+    let ticketId = 1;
     let closeTicketId = null;
 
-    // Abrir chamado
-    document.getElementById("ticketForm").addEventListener("submit", function(e){
+    const form = document.getElementById("ticketForm");
+    const list = document.getElementById("ticketsList");
+
+    form.addEventListener("submit", function(e){
       e.preventDefault();
+      const subject = document.getElementById("subject").value;
+      const client = document.getElementById("client").value;
+      const tech = document.getElementById("tech").value;
+      const priority = document.getElementById("priority").value;
+      const description = document.getElementById("description").value;
+
       const newTicket = {
-        id: tickets.length + 1,
-        subject: document.getElementById("subject").value,
-        client: document.getElementById("client").value,
-        tech: document.getElementById("tech").value,
-        priority: document.getElementById("priority").value,
+        id: ticketId++,
+        subject,
+        client,
+        tech,
+        priority,
+        description,
         status: "open",
         date: new Date().toLocaleString()
       };
+
       tickets.push(newTicket);
-      this.reset();
+      form.reset();
       renderTickets();
     });
 
-    // Renderizar lista
     function renderTickets(){
-      const list = document.getElementById("ticketsList");
       list.innerHTML = "";
       tickets.forEach(ticket => {
         const tr = document.createElement("tr");
         tr.classList.add(`priority-${ticket.priority}`);
         tr.innerHTML = `
-          <td class="px-4 py-2">${ticket.id}</td>
-          <td class="px-4 py-2">${ticket.subject}</td>
-          <td class="px-4 py-2">${ticket.client}</td>
-          <td class="px-4 py-2">${ticket.tech}</td>
-          <td class="px-4 py-2 capitalize">${ticket.priority}</td>
-          <td class="px-4 py-2 capitalize">${ticket.status}</td>
-          <td class="px-4 py-2">${ticket.date}</td>
-          <td class="px-4 py-2 space-x-2">
-            <button onclick="editTicket(${ticket.id})" class="text-blue-600 hover:underline">Editar</button>
-            ${ticket.status !== "resolved" ? `<button onclick="openCloseModal(${ticket.id})" class="text-pink-600 hover:underline">Encerrar</button>` : ""}
+          <td class="border px-4 py-2">${ticket.id}</td>
+          <td class="border px-4 py-2">${ticket.subject}</td>
+          <td class="border px-4 py-2">${ticket.client}</td>
+          <td class="border px-4 py-2">${ticket.tech}</td>
+          <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+          <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+          <td class="border px-4 py-2 space-x-2">
+            <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+            ${ticket.status !== "resolved" ? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>` : "✅ Encerrado"}
           </td>
         `;
         list.appendChild(tr);
 
-        if(ticket.priority === "critical" && ticket.status !== "resolved") {
+        if(ticket.priority === "critical"){
           tr.classList.add("blink");
         }
       });
     }
 
-    // Editar chamado
-    function editTicket(id){
-      editTicketId = id;
-      const t = tickets.find(t => t.id === id);
-      if(t){
-        document.getElementById("editSubject").value = t.subject;
-        document.getElementById("editClient").value = t.client;
-        document.getElementById("editTech").value = t.tech;
-        document.getElementById("editPriority").value = t.priority;
-        document.getElementById("editModal").classList.remove("hidden");
-      }
-    }
-
-    document.getElementById("editForm").addEventListener("submit", function(e){
-      e.preventDefault();
-      const t = tickets.find(t => t.id === editTicketId);
-      if(t){
-        t.subject = document.getElementById("editSubject").value;
-        t.client = document.getElementById("editClient").value;
-        t.tech = document.getElementById("editTech").value;
-        t.priority = document.getElementById("editPriority").value;
-        renderTickets();
-        closeEditModal();
-      }
-    });
-
-    function closeEditModal(){
-      document.getElementById("editModal").classList.add("hidden");
-    }
-
-    // Encerrar chamado
+    // Modal de Encerramento
     function openCloseModal(id){
       closeTicketId = id;
+      document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
       document.getElementById("closeModal").classList.remove("hidden");
+      document.getElementById("closeModal").classList.add("flex");
     }
-
     function closeCloseModal(){
       document.getElementById("closeModal").classList.add("hidden");
+      document.getElementById("closeModal").classList.remove("flex");
     }
-
     function confirmCloseTicket(){
       if(closeTicketId !== null){
-        const t = tickets.find(t => t.id === closeTicketId);
+        const t = tickets.find(t => t.id === Number(closeTicketId));
         if(t){
           t.status = "resolved";
           renderTickets();
@@ -202,6 +166,30 @@
         }
       }
     }
+
+    // Modal de Detalhes
+    function viewDetails(id){
+      const t = tickets.find(ticket => ticket.id === id);
+      if(t){
+        document.getElementById("detailsContent").innerHTML = `
+          <p><strong>ID:</strong> ${t.id}</p>
+          <p><strong>Assunto:</strong> ${t.subject}</p>
+          <p><strong>Descrição:</strong> ${t.description}</p>
+          <p><strong>Cliente:</strong> ${t.client}</p>
+          <p><strong>Técnico:</strong> ${t.tech}</p>
+          <p><strong>Prioridade:</strong> ${t.priority}</p>
+          <p><strong>Status:</strong> ${t.status}</p>
+          <p><strong>Abertura:</strong> ${t.date}</p>
+        `;
+        document.getElementById("detailsModal").classList.remove("hidden");
+        document.getElementById("detailsModal").classList.add("flex");
+      }
+    }
+    function closeDetailsModal(){
+      document.getElementById("detailsModal").classList.add("hidden");
+      document.getElementById("detailsModal").classList.remove("flex");
+    }
   </script>
+
 </body>
 </html>
