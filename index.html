@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sistema de Chamados - SharePoint + Export</title>
+  <title>Sistema de Chamados - SharePoint + EmailJS</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
@@ -196,7 +196,35 @@
 </div>
 
 <script>
+emailjs.init(''); // inicializado com a chave do usuário salva na aba Configurações
+
 let tickets = [];
+
+function getEmailConfig() {
+  const cfg = JSON.parse(localStorage.getItem('emailConfig') || '{}');
+  return cfg;
+}
+
+function sendEmail(ticket, action) {
+  const cfg = getEmailConfig();
+  if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey || !cfg.internals) return;
+  
+  const templateParams = {
+    subject: ticket.subject,
+    client: ticket.client,
+    tech: ticket.tech,
+    priority: ticket.priority,
+    description: ticket.desc,
+    status: ticket.status,
+    date: ticket.date,
+    action: action,
+    to_email: cfg.internals.join(',')
+  };
+  
+  emailjs.send(cfg.serviceId, cfg.templateId, templateParams, cfg.publicKey)
+    .then(() => console.log('Email enviado:', action))
+    .catch(err => console.error('Erro ao enviar email:', err));
+}
 
 const saveConfigBtn = document.getElementById('saveConfigBtn');
 const configMsg = document.getElementById('configMsg');
@@ -230,8 +258,13 @@ document.getElementById('ticketForm').addEventListener('submit', (e) => {
     date: new Date().toLocaleString()
   };
   const index = tickets.findIndex(t => t.id === id);
-  if(index >= 0) tickets[index] = ticket;
-  else tickets.push(ticket);
+  if(index >= 0) {
+    tickets[index] = ticket;
+    sendEmail(ticket, 'editado');
+  } else {
+    tickets.push(ticket);
+    sendEmail(ticket, 'aberto');
+  }
 
   renderTickets();
   ticketModal.classList.add('hidden');
@@ -279,8 +312,10 @@ function editTicket(id) {
 }
 
 function deleteTicket(id) {
+  const ticket = tickets.find(t => t.id === id);
   tickets = tickets.filter(t => t.id !== id);
   renderTickets();
+  sendEmail(ticket, 'excluído');
 }
 
 // Export
@@ -335,6 +370,45 @@ tabConfigBtn.addEventListener('click', () => {
   tabConfig.classList.remove('hidden');
   tabTickets.classList.add('hidden');
 });
+
+// Filtros e pesquisa
+document.getElementById('searchInput').addEventListener('input', filterTickets);
+document.getElementById('statusFilter').addEventListener('change', filterTickets);
+document.getElementById('priorityFilter').addEventListener('change', filterTickets);
+
+function filterTickets() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const priority = document.getElementById('priorityFilter').value;
+
+  const filtered = tickets.filter(t => {
+    const matchesSearch = t.subject.toLowerCase().includes(search) || t.client.toLowerCase().includes(search) || t.tech.toLowerCase().includes(search);
+    const matchesStatus = status ? t.status === status : true;
+    const matchesPriority = priority ? t.priority === priority : true;
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  const list = document.getElementById('ticketsList');
+  list.innerHTML = '';
+  filtered.forEach(ticket => {
+    const tr = document.createElement('tr');
+    tr.className = `priority-${ticket.priority} hover:bg-gray-50 cursor-pointer`;
+    tr.innerHTML = `
+      <td class="px-4 py-2">${ticket.id}</td>
+      <td class="px-4 py-2">${ticket.subject}</td>
+      <td class="px-4 py-2">${ticket.client}</td>
+      <td class="px-4 py-2">${ticket.tech}</td>
+      <td class="px-4 py-2 capitalize">${ticket.priority}</td>
+      <td class="px-4 py-2 capitalize">${ticket.status.replace('-', ' ')}</td>
+      <td class="px-4 py-2">${ticket.date}</td>
+      <td class="px-4 py-2 space-x-2">
+        <button onclick="editTicket('${ticket.id}')" class="text-blue-600 hover:underline">Editar</button>
+        <button onclick="deleteTicket('${ticket.id}')" class="text-red-600 hover:underline">Excluir</button>
+      </td>
+    `;
+    list.appendChild(tr);
+  });
+}
 </script>
 
 </body>
