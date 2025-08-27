@@ -161,8 +161,7 @@
 
       <div class="bg-white p-4 rounded shadow">
         <h3 class="text-lg font-semibold mb-2">Lista de Técnicos</h3>
-        <p class="text-sm text-gray-600 mb-2">Editar lista de técnicos (separados por vírgula).
-Utilizado no formulário de chamados.</p>
+        <p class="text-sm text-gray-600 mb-2">Editar lista de técnicos (separados por vírgula). Utilizado no formulário de chamados.</p>
         <textarea id="cfgTechnicians" class="w-full border rounded p-2" rows="2" placeholder="João Silva, Maria Oliveira, Ana Costa"></textarea>
         <div class="mt-2">
           <button id="saveTechBtn" class="bg-green-600 text-white px-4 py-2 rounded">Salvar Técnicos</button>
@@ -243,12 +242,12 @@ const STORAGE_KEY = "tickets_v1";
 const CFG_KEY = "tickets_cfg_v1";
 
 // ** SHAREPOINT CONFIGURATION **
-const SHAREPOINT_SITE_URL = "https://arcelormittal-my.sharepoint.com/personal/97613371_amdistribuicao_com_br/Lists/Chamados"; // EX: https://suaempresa.sharepoint.com/sites/SeuSite
-const SHAREPOINT_LIST_NAME = "Chamados"; // EX: Chamados
+const SHAREPOINT_SITE_URL = "https://arcelormittal-my.sharepoint.com/personal/97613371_amdistribuicao_com_br/Lists/Chamados";
+const SHAREPOINT_LIST_NAME = "Chamados";
 
 // Mapeie os nomes das colunas da sua lista do SharePoint para os campos do formulário.
 const SHAREPOINT_FIELDS_MAP = {
-  subject: "Assunto", // 'Title' é a coluna padrão do SharePoint para o Assunto
+  subject: "Assunto",
   priority: "Prioridade",
   technician: "Técnico",
   status: "Status do Chamado",
@@ -256,7 +255,6 @@ const SHAREPOINT_FIELDS_MAP = {
   clientEmail: "E-mail do Usuário",
   description: "Descricão do Problema"
 };
-
 // --- Funções de persistência adaptadas para SharePoint ---
 async function loadTickets() {
   const url = `${SHAREPOINT_SITE_URL}/_api/web/lists/GetByTitle('${SHAREPOINT_LIST_NAME}')/items`;
@@ -301,7 +299,6 @@ async function saveTicketToSharePoint(ticketData) {
     [SHAREPOINT_FIELDS_MAP.clientEmail]: ticketData.clientEmail,
     [SHAREPOINT_FIELDS_MAP.description]: ticketData.description,
   };
-
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -320,7 +317,8 @@ async function saveTicketToSharePoint(ticketData) {
 }
 
 // O código de persistência local foi removido para priorizar o SharePoint.
-function loadCfg() { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); }
+function loadCfg() { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}");
+}
 function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
 
 let tickets = []; // Inicializado como array vazio e será populado por loadTickets()
@@ -335,7 +333,6 @@ let cfg = Object.assign({
 }, loadCfg());
 let editingTicketId = null;
 let prevStats = { total: -1, open: -1, inProgress: -1, resolved: -1 };
-
 /* DOM refs */
 const tabs = { tickets: document.getElementById("tabTickets"), config: document.getElementById("tabConfig") };
 const btnTabTickets = document.getElementById("tabTicketsBtn");
@@ -386,14 +383,15 @@ const exportCSVBtn = document.getElementById("exportCSV");
     ========================= */
 function ensureEmailInit() {
   if (cfg.publicKey) {
-    try { emailjs.init(cfg.publicKey); } catch(e){ /* ignore */ }
+    try { emailjs.init(cfg.publicKey);
+} catch(e){ /* ignore */ }
   }
 }
 
 function sendEmailRaw({ to, subject, body }) {
   if (!cfg.serviceId || !cfg.templateId || !cfg.publicKey) {
     console.warn("E-mail não enviado: dados EmailJS não configurados.");
-    return Promise.resolve("not-configured");
+return Promise.resolve("not-configured");
   }
   ensureEmailInit();
 
@@ -403,13 +401,13 @@ function sendEmailRaw({ to, subject, body }) {
     message: body,
     site: window.location.origin
   };
-  return emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
+return emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
 }
 
 function notifyInternals(subject, body) {
   if (!cfg.internals) return Promise.resolve("no-internals");
   const list = cfg.internals.split(",").map(s => s.trim()).filter(Boolean);
-  const promises = list.map(to => sendEmailRaw({ to, subject, body }).catch(e => e));
+const promises = list.map(to => sendEmailRaw({ to, subject, body }).catch(e => e));
   return Promise.allSettled(promises);
 }
 
@@ -422,7 +420,8 @@ function notifyClient(clientEmail, subject, body) {
     Tab navigation
     ========================= */
 function showTab(name) {
-  if (name === "tickets") { tabs.tickets.classList.remove("hidden"); tabs.config.classList.add("hidden"); }
+  if (name === "tickets") { tabs.tickets.classList.remove("hidden");
+tabs.config.classList.add("hidden"); }
   else { tabs.tickets.classList.add("hidden"); tabs.config.classList.remove("hidden"); }
 }
 btnTabTickets.addEventListener("click", () => showTab("tickets"));
@@ -432,11 +431,11 @@ btnTabConfig.addEventListener("click", () => showTab("config"));
     ========================= */
 function loadCfgToUI() {
   cfgServiceId.value = cfg.serviceId || "";
-  cfgTemplateId.value = cfg.templateId || "";
+cfgTemplateId.value = cfg.templateId || "";
   cfgPublicKey.value = cfg.publicKey || "";
   cfgInternals.value = cfg.internals || "";
   cfgSubjectOpen.value = cfg.subjectOpen || "";
-  cfgSubjectClose.value = cfg.subjectClose || "";
+cfgSubjectClose.value = cfg.subjectClose || "";
   cfgTechnicians.value = cfg.technicians || "";
 }
 loadCfgToUI();
@@ -487,7 +486,7 @@ function getTechnicians() {
 function populateTechniciansSelect() {
   const sel = document.getElementById("technician");
   sel.innerHTML = "<option value=''>Selecione</option>";
-  getTechnicians().forEach(t => {
+getTechnicians().forEach(t => {
     const opt = document.createElement("option");
     opt.value = t;
     opt.textContent = t;
@@ -507,13 +506,13 @@ function animateCard(card) {
 function updateStats() {
   const total = tickets.length;
   const open = tickets.filter(t => t.status === "open").length;
-  const inProgress = tickets.filter(t => t.status === "in-progress").length;
+const inProgress = tickets.filter(t => t.status === "in-progress").length;
   const resolved = tickets.filter(t => t.status === "resolved").length;
-  if (total !== prevStats.total) animateCard(cardTotal);
+if (total !== prevStats.total) animateCard(cardTotal);
   if (open !== prevStats.open) animateCard(cardOpen);
   if (inProgress !== prevStats.inProgress) animateCard(cardInProgress);
   if (resolved !== prevStats.resolved) animateCard(cardResolved);
-  statTotal.textContent = total;
+statTotal.textContent = total;
   statOpen.textContent = open;
   statInProgress.textContent = inProgress;
   statResolved.textContent = resolved;
@@ -526,7 +525,7 @@ function updateStats() {
     ========================= */
 function escapeHtml(str) {
   if (!str) return "";
-  return String(str)
+return String(str)
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;")
@@ -554,12 +553,12 @@ function getFilteredTickets() {
 
 function displayTickets() {
   const filtered = getFilteredTickets();
-  ticketsList.innerHTML = "";
+ticketsList.innerHTML = "";
 
   if (!filtered.length) {
     ticketsList.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Nenhum chamado encontrado.</td></tr>`;
     updateStats();
-    return;
+return;
   }
 
   filtered.forEach(ticket => {
@@ -579,22 +578,22 @@ function displayTickets() {
         ${ticket.status !== "resolved" ? `<button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded text-xs"><i class="fas fa-pen mr-1"></i>Editar</button>` : ""}
       </td>
     `;
-    if (ticket.status !== "resolved") {
+if (ticket.status !== "resolved") {
       tr.querySelector(".closeBtn").addEventListener("click", async () => {
         // Lógica para encerrar no SharePoint
         alert(`Chamado ID ${ticket.id} encerrado.`);
       });
-    }
+}
 
     tr.querySelector(".viewBtn").addEventListener("click", () => {
       openModalForTicket(ticket, { viewOnly: true });
     });
-    if (tr.querySelector(".editBtn")) {
+if (tr.querySelector(".editBtn")) {
       tr.querySelector(".editBtn").addEventListener("click", () => {
         editingTicketId = ticket.id;
         openModalForTicket(ticket, { viewOnly: false });
       });
-    }
+}
 
     ticketsList.appendChild(tr);
   });
@@ -607,12 +606,12 @@ function displayTickets() {
     ========================= */
 function openModalForTicket(ticket = null, { viewOnly = false } = {}) {
   const subjectEl = document.getElementById("subject");
-  const priorityEl = document.getElementById("priority");
+const priorityEl = document.getElementById("priority");
   const technicianEl = document.getElementById("technician");
   const statusEl = document.getElementById("status");
   const clientNameEl = document.getElementById("clientName");
   const clientEmailEl = document.getElementById("clientEmail");
-  const descriptionEl = document.getElementById("description");
+const descriptionEl = document.getElementById("description");
 
   if (ticket) {
     modalTitle.textContent = viewOnly ? `Visualizar Chamado #${ticket.id}` : `Editar Chamado #${ticket.id}`;
@@ -620,24 +619,24 @@ function openModalForTicket(ticket = null, { viewOnly = false } = {}) {
     priorityEl.value = ticket.priority;
     technicianEl.value = ticket.technician;
     statusEl.value = ticket.status;
-    clientNameEl.value = ticket.clientName;
+clientNameEl.value = ticket.clientName;
     clientEmailEl.value = ticket.clientEmail;
     descriptionEl.value = ticket.description;
   } else {
     modalTitle.textContent = "Abrir Chamado";
-    subjectEl.value = "";
+subjectEl.value = "";
     priorityEl.value = "";
     technicianEl.value = "";
     statusEl.value = "open";
     clientNameEl.value = "";
     clientEmailEl.value = "";
-    descriptionEl.value = "";
+descriptionEl.value = "";
   }
 
   if (viewOnly) {
     Array.from(ticketForm.elements).forEach(el => el.disabled = true);
     saveTicketBtn.classList.add("hidden");
-  } else {
+} else {
     Array.from(ticketForm.elements).forEach(el => el.disabled = false);
     saveTicketBtn.classList.remove("hidden");
   }
@@ -673,19 +672,18 @@ ticketForm.addEventListener("submit", async (e) => {
     if (!t) { alert("Chamado não encontrado."); ticketModal.classList.add("hidden"); return; }
 
     t.subject = subject;
-    t.priority = priority;
+t.priority = priority;
     t.technician = technician;
     t.status = status;
     t.clientName = clientName;
     t.clientEmail = clientEmail;
     t.description = description;
-
-    // Lógica para salvar a edição no SharePoint aqui
+// Lógica para salvar a edição no SharePoint aqui
     
     notifyInternals(`Chamado Editado - ID ${t.id}`, `O chamado ID ${t.id} foi editado.\nAssunto: ${t.subject}\nCliente: ${t.clientName}\nPrioridade: ${t.priority}`)
       .then(()=>{})
       .catch(()=>{});
-    alert("Chamado atualizado.");
+alert("Chamado atualizado.");
   } else {
     // criação
     const newTicket = {
@@ -698,19 +696,17 @@ ticketForm.addEventListener("submit", async (e) => {
       description,
       date: new Date().toLocaleDateString()
     };
-    
-    try {
+try {
       const spItem = await saveTicketToSharePoint(newTicket);
       newTicket.id = spItem.d.ID;
       tickets.push(newTicket);
-
-      // notificar internals + confirmar para cliente (ambos best-effort)
+// notificar internals + confirmar para cliente (ambos best-effort)
       notifyInternals(cfg.subjectOpen || "Novo Chamado Aberto", `Novo chamado ID ${newTicket.id}\nAssunto: ${newTicket.subject}\nCliente: ${newTicket.clientName}\nPrioridade: ${newTicket.priority}`).catch(()=>{});
-      notifyClient(newTicket.clientEmail, cfg.subjectOpen || "Seu chamado foi recebido", `Olá ${newTicket.clientName},\n\nRecebemos seu chamado (ID ${newTicket.id}).\nAssunto: ${newTicket.subject}\nTécnico: ${newTicket.technician}\n\nResponderemos em breve.`).catch(()=>{});
-      alert("Chamado criado com sucesso e salvo no SharePoint.");
+notifyClient(newTicket.clientEmail, cfg.subjectOpen || "Seu chamado foi recebido", `Olá ${newTicket.clientName},\n\nRecebemos seu chamado (ID ${newTicket.id}).\nAssunto: ${newTicket.subject}\nTécnico: ${newTicket.technician}\n\nResponderemos em breve.`).catch(()=>{});
+alert("Chamado criado com sucesso e salvo no SharePoint.");
     } catch(error) {
       alert("Falha ao criar o chamado. Verifique a configuração do SharePoint.");
-    }
+}
   }
 
   ticketModal.classList.add("hidden");
@@ -738,7 +734,7 @@ document.addEventListener("click", (ev) => {
 function getVisibleRowsForExport() {
   // Return array of objects with the table columns
   const filtered = getFilteredTickets();
-  return filtered.map(t => ({
+return filtered.map(t => ({
     ID: t.id,
     Assunto: t.subject,
     Cliente: `${t.clientName} (${t.clientEmail || ""})`,
@@ -753,7 +749,7 @@ function timestampFileName(ext) {
   const now = new Date();
   const pad = n => String(n).padStart(2, "0");
   const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
   return `relatorio_chamados_${date}_${time}.${ext}`;
 }
 
@@ -795,24 +791,24 @@ exportPDFBtn.addEventListener("click", () => {
   const rows = getVisibleRowsForExport();
   if (!rows.length) { alert("Nenhum chamado encontrado para exportar."); return; }
 
-  // Build columns and data for autoTable
+  // Build columns 
   const columns = Object.keys(rows[0]);
   const data = rows.map(r => columns.map(c => String(r[c])));
-  // Using jspdf from UMD (window.jspdf)
+// Using jspdf from UMD (window.jspdf)
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape', 'pt', 'a4');
-  doc.setFontSize(14);
+doc.setFontSize(14);
   doc.text("Relatório de Chamados", 40, 40);
   doc.setFontSize(10);
   doc.text(`Gerado em: ${new Date().toLocaleString()}`, 40, 58);
-  doc.autoTable({
+doc.autoTable({
     head: [columns],
     body: data,
     startY: 80,
     styles: { fontSize: 9, cellPadding: 4 },
     headStyles: { fillColor: [33, 150, 243] }
   });
-  doc.save(timestampFileName("pdf"));
+doc.save(timestampFileName("pdf"));
   exportMenu.classList.add("hidden");
 });
 
@@ -821,7 +817,7 @@ exportPDFBtn.addEventListener("click", () => {
     ========================= */
 async function init() {
   loadCfgToUI();
-  populateTechniciansSelect();
+populateTechniciansSelect();
   tickets = await loadTickets(); // Carregar do SharePoint no início
   displayTickets();
   updateStats();
