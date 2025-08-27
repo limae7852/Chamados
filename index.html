@@ -3,11 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Chamados Completo</title>
+<title>Sistema de Chamados Completo com Email</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script type="text/javascript">
+   (function(){emailjs.init("SEU_USER_ID");})();
+</script>
 <style>
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; }
@@ -167,6 +171,13 @@ tbody.appendChild(tr);
 updateTechnicianFilter();
 }
 
+// Função para enviar e-mail via EmailJS
+function sendEmail(template, data){
+emailjs.send('SEU_SERVICE_ID', template, data)
+.then(()=>console.log("E-mail enviado com sucesso"))
+.catch(err=>console.error("Erro ao enviar e-mail:", err));
+}
+
 // Formulário de abertura
 document.getElementById("ticketForm").addEventListener("submit", function(e){
 e.preventDefault();
@@ -179,6 +190,15 @@ const date = new Date().toLocaleDateString('pt-BR');
 tickets.push({id: ticketCounter++, subject, clientName, clientEmail, technician, priority, status:"open", date});
 this.reset();
 renderTickets();
+
+// Enviar e-mail de abertura
+sendEmail('template_abertura',{
+to_name: technician,
+client_name: clientName,
+subject: subject,
+priority: priority,
+client_email: clientEmail
+});
 });
 
 // Modal Encerrar
@@ -197,6 +217,15 @@ document.querySelectorAll("#ticketsList tr").forEach(row=>{ if(Number(row.childr
 closeCloseModal();
 renderTickets();
 alert(`Chamado #${t.id} encerrado com sucesso!`);
+
+// Enviar e-mail de encerramento
+sendEmail('template_encerramento',{
+to_name: t.technician,
+client_name: t.clientName,
+subject: t.subject,
+priority: t.priority,
+client_email: t.clientEmail
+});
 }
 }
 }
