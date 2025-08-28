@@ -70,13 +70,21 @@
 
 <!-- Modal Configurações -->
 <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+  <div class="bg-white rounded-lg shadow-lg w-[32rem] p-6">
     <h3 class="text-lg font-bold mb-4">⚙️ Configurações do Sistema</h3>
     <form id="formSettings" class="space-y-3">
       <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
+
+      <hr class="my-4">
+      <h4 class="font-semibold">👷 Cadastro de Técnicos</h4>
+      <div class="flex space-x-2">
+        <input type="text" id="newTech" placeholder="Nome do técnico" class="border p-2 rounded flex-1">
+        <button type="button" id="addTechBtn" class="px-4 py-2 rounded bg-green-600 text-white">Adicionar</button>
+      </div>
+      <ul id="techList" class="list-disc pl-5 mt-2 text-sm text-gray-700"></ul>
 
       <div class="flex justify-end space-x-2 mt-4">
         <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
@@ -92,22 +100,71 @@ document.addEventListener("DOMContentLoaded", function(){
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 
+  const addTechBtn = document.getElementById("addTechBtn");
+  const newTechInput = document.getElementById("newTech");
+  const techList = document.getElementById("techList");
+  const techSelect = document.getElementById("tech");
+
+  // --- MODAL ---
   function openSettings(){
     modalSettings.classList.remove("hidden");
     modalSettings.classList.add("flex");
+    renderTechs();
   }
   function closeSettings(){
     modalSettings.classList.add("hidden");
     modalSettings.classList.remove("flex");
   }
-
   btnSettings.addEventListener("click", openSettings);
   closeSettingsBtn.addEventListener("click", closeSettings);
-
-  // fecha clicando fora do modal
   modalSettings.addEventListener("click", (e)=>{
     if(e.target === modalSettings) closeSettings();
   });
+
+  // --- CADASTRO DE TÉCNICOS ---
+  function getTechs(){
+    return JSON.parse(localStorage.getItem("techs") || "[]");
+  }
+  function saveTechs(techs){
+    localStorage.setItem("techs", JSON.stringify(techs));
+    renderTechs();
+    renderTechSelect();
+  }
+  function renderTechs(){
+    const techs = getTechs();
+    techList.innerHTML = "";
+    techs.forEach((t, i)=>{
+      const li = document.createElement("li");
+      li.textContent = t;
+      techList.appendChild(li);
+    });
+  }
+  function renderTechSelect(){
+    const techs = getTechs();
+    techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+    techs.forEach(t=>{
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      techSelect.appendChild(opt);
+    });
+  }
+  addTechBtn.addEventListener("click", ()=>{
+    const name = newTechInput.value.trim();
+    if(name){
+      const techs = getTechs();
+      if(!techs.includes(name)){
+        techs.push(name);
+        saveTechs(techs);
+        newTechInput.value = "";
+      } else {
+        alert("Este técnico já está cadastrado!");
+      }
+    }
+  });
+
+  // inicia com lista de técnicos carregada
+  renderTechSelect();
 });
 </script>
 
