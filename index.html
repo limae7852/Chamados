@@ -1,72 +1,115 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Chamados</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sistema de Chamados</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<style>
+  @keyframes blinkHighlight {
+    0% { background-color: #fce7f3; }
+    50% { background-color: #f9a8d4; }
+    100% { background-color: #fce7f3; }
+  }
+  .blink { animation: blinkHighlight 1s ease-in-out 3; }
+  .priority-low { background-color: #ecfdf5; }
+  .priority-medium { background-color: #fef9c3; }
+  .priority-high { background-color: #fee2e2; }
+  .priority-critical { background-color: #fce7f3; font-weight: bold; }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 text-gray-900">
 
-  <!-- Navbar -->
-  <nav class="bg-blue-700 text-white p-4 flex justify-between">
-    <h1 class="text-lg font-bold">📌 Sistema de Chamados</h1>
-    <button id="btnSettings" class="bg-blue-500 px-3 py-1 rounded-lg hover:bg-blue-600">
-      ⚙️ Configurações
-    </button>
-  </nav>
-
-  <!-- Conteúdo -->
-  <main class="p-6">
-    <p>Bem-vindo ao sistema! Aqui ficam os chamados...</p>
-  </main>
-
-  <!-- Modal Configurações -->
-  <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="text-xl font-bold mb-4">Configurações</h2>
-
-      <label class="block mb-2 text-sm font-medium">E-mail de Notificação:</label>
-      <input id="notifyEmail" type="email" class="w-full border p-2 rounded mb-4" placeholder="exemplo@email.com">
-
-      <label class="block mb-2 text-sm font-medium">Chave API EmailJS:</label>
-      <input id="emailjsKey" type="text" class="w-full border p-2 rounded mb-4">
-
-      <div class="flex justify-end gap-2">
-        <button id="closeSettings" class="px-4 py-2 bg-red-600 text-white rounded-lg">Fechar</button>
-        <button id="saveSettings" class="px-4 py-2 bg-green-600 text-white rounded-lg">Salvar</button>
-      </div>
-    </div>
+<div class="container mx-auto p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
+    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
   </div>
 
-  <!-- Script -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const btnSettings = document.getElementById("btnSettings");
-      const modalSettings = document.getElementById("modalSettings");
-      const closeSettingsBtn = document.getElementById("closeSettings");
-      const saveSettingsBtn = document.getElementById("saveSettings");
+  <!-- Formulário de Chamados -->
+  <div class="bg-white p-6 rounded shadow mb-6">
+    <h2 class="text-xl font-semibold mb-4">Abrir Novo Chamado</h2>
+    <form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="text" id="subject" placeholder="Assunto" class="border p-2 rounded" required>
+      <input type="text" id="client" placeholder="Cliente" class="border p-2 rounded" required>
+      <select id="tech" class="border p-2 rounded" required>
+        <option value="">Selecione o Técnico</option>
+      </select>
+      <select id="priority" class="border p-2 rounded" required>
+        <option value="">Selecione a Prioridade</option>
+        <option value="low">Baixa</option>
+        <option value="medium">Média</option>
+        <option value="high">Alta</option>
+        <option value="critical">Crítica</option>
+      </select>
+      <textarea id="description" placeholder="Descreva o problema..." class="border p-2 rounded col-span-1 md:col-span-2" required></textarea>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded col-span-1 md:col-span-2">Abrir Chamado</button>
+    </form>
+  </div>
 
-      // Abrir modal
-      btnSettings.addEventListener("click", () => {
-        modalSettings.classList.remove("hidden");
-        modalSettings.classList.add("flex");
-      });
+  <!-- Lista de Chamados -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Chamados Abertos</h2>
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-4 py-2 border">ID</th>
+          <th class="px-4 py-2 border">Assunto</th>
+          <th class="px-4 py-2 border">Cliente</th>
+          <th class="px-4 py-2 border">Técnico</th>
+          <th class="px-4 py-2 border">Prioridade</th>
+          <th class="px-4 py-2 border">Status</th>
+          <th class="px-4 py-2 border">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="ticketsList"></tbody>
+    </table>
+  </div>
+</div>
 
-      // Fechar modal
-      closeSettingsBtn.addEventListener("click", () => {
-        modalSettings.classList.add("hidden");
-        modalSettings.classList.remove("flex");
-      });
+<!-- Modal Configurações -->
+<div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold mb-4">⚙️ Configurações do Sistema</h3>
+    <form id="formSettings" class="space-y-3">
+      <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
+      <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
+      <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
+      <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
 
-      // Salvar (exemplo simples só para debug)
-      saveSettingsBtn.addEventListener("click", () => {
-        alert("Configurações salvas com sucesso!");
-        modalSettings.classList.add("hidden");
-        modalSettings.classList.remove("flex");
-      });
-    });
-  </script>
+      <div class="flex justify-end space-x-2 mt-4">
+        <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  const btnSettings = document.getElementById("btnSettings");
+  const modalSettings = document.getElementById("modalSettings");
+  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+
+  function openSettings(){
+    modalSettings.classList.remove("hidden");
+    modalSettings.classList.add("flex");
+  }
+  function closeSettings(){
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
+  }
+
+  btnSettings.addEventListener("click", openSettings);
+  closeSettingsBtn.addEventListener("click", closeSettings);
+
+  // fecha clicando fora do modal
+  modalSettings.addEventListener("click", (e)=>{
+    if(e.target === modalSettings) closeSettings();
+  });
+});
+</script>
 
 </body>
 </html>
